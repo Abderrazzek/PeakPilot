@@ -647,11 +647,13 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   modalButtonSecondaryText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+    textAlign: 'center',
   },
   modalButtonPrimary: {
     flex: 1,
@@ -659,11 +661,13 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   modalButtonPrimaryText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+    textAlign: 'center',
   },
   orangeButton: {
     backgroundColor: '#ea580c',
