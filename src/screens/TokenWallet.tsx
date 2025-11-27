@@ -670,7 +670,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   orangeButton: {
-    backgroundColor: '#ea580c',
+    backgroundColor: '#3b82f6',
   },
   warningBanner: {
     backgroundColor: 'rgba(127, 29, 29, 0.5)',
@@ -692,7 +692,7 @@ const styles = StyleSheet.create({
   },
   warningSubtitle: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#ffffff',
   },
   inputHelperText: {
     fontSize: 12,
