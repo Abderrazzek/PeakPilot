@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LineChart } from 'react-native-chart-kit';
 import { Zap, Coins, Lightbulb, Info, Clock } from 'lucide-react-native';
+import Svg, { Line } from 'react-native-svg';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -20,23 +21,209 @@ export default function DashboardScreen() {
   const isUnderThreshold = currentUsage < threshold;
   const tokensEarned = isUnderThreshold ? 15 : 0;
   const penalty = !isUnderThreshold ? 8 : 0;
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-  const chartData = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    datasets: [
-      {
-        data: [25, 28, 24, 26, 29, 27, 28.5],
-        color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-        strokeWidth: 3,
-      },
-      {
-        data: [30, 30, 30, 30, 30, 30, 30],
-        color: (opacity = 1) => `rgba(239, 68, 68, ${opacity})`,
-        strokeWidth: 2,
-        withDots: false,
-      },
-    ],
+  // Generate quarter-hour labels for one full day (96 intervals)
+  // Provide 96 labels but only show text for every hour (every 4th label) for readability
+  const generateQuarterHourLabels = () => {
+    const labels = [];
+    for (let i = 0; i < 96; i++) {
+      const hour = Math.floor(i / 4);
+      // Only show label text at the start of each hour (i % 4 === 0)
+      if (i % 4 === 0) {
+        labels.push(`${hour.toString().padStart(2, '0')}:00`);
+      } else {
+        labels.push(''); // Empty string for other quarters
+      }
+    }
+    return labels;
   };
+
+  // Generate 96 data points (one for each quarter hour in 24 hours)
+  const generateQuarterHourData = () => {
+    const data = [];
+    // Simulate realistic energy consumption pattern throughout the day
+    for (let i = 0; i < 96; i++) {
+      const hour = Math.floor(i / 4);
+
+      // Base consumption varies by time of day
+      let baseConsumption = 0.8; // Base kWh per quarter hour
+
+      // Morning peak (6-9 AM) - token collection window
+      if (hour >= 6 && hour < 9) {
+        baseConsumption = 0.6 + Math.random() * 0.3; // Lower consumption during collection window
+      }
+      // Evening peak (6-11 PM) - token collection window
+      else if (hour >= 18 && hour < 23) {
+        baseConsumption = 0.7 + Math.random() * 0.4;
+      }
+      // Night (11 PM - 6 AM) - low consumption
+      else if (hour >= 23 || hour < 6) {
+        baseConsumption = 0.3 + Math.random() * 0.2;
+      }
+      // Daytime (9 AM - 6 PM) - moderate consumption
+      else {
+        baseConsumption = 0.9 + Math.random() * 0.5;
+      }
+
+      // Add some variation for quarter-hour intervals
+      baseConsumption += (Math.random() - 0.5) * 0.1;
+      data.push(Math.max(0.1, baseConsumption));
+    }
+    return data;
+  };
+
+  // Memoize data generation to prevent regeneration on each render
+  const quarterHourData = useMemo(() => generateQuarterHourData(), []);
+  // Threshold: 30 kWh per day / 96 quarter-hours ≈ 0.3125 kWh per quarter hour
+  const thresholdData = useMemo(
+    () => Array(96).fill(threshold / 96),
+    [threshold],
+  );
+
+  // Calculate chart width: 96 data points * 18 pixels per point for better spacing
+  // This gives us ~1728 pixels width, ensuring more space between values
+  const chartWidth = Math.max(screenWidth - 48, 96 * 18);
+
+  // Format time from index (quarter-hour index to time string)
+  const formatTimeFromIndex = (index: number): string => {
+    const hour = Math.floor(index / 4);
+    const quarter = (index % 4) * 15;
+    return `${hour.toString().padStart(2, '0')}:${quarter
+      .toString()
+      .padStart(2, '0')}`;
+  };
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const isScrollingRef = useRef(false);
+  const scrollOffsetRef = useRef(0);
+  const touchStartTimeRef = useRef(0);
+  const touchStartXRef = useRef(0);
+  const [currentScrollIndex, setCurrentScrollIndex] = useState<number | null>(
+    null,
+  );
+
+  // Calculate which data point is at a given X position in the chart
+  const calculateIndexFromXPosition = (xPosition: number) => {
+    // Chart padding (react-native-chart-kit adds padding for labels/axes)
+    // Fine-tuned to match actual chart rendering
+    const leftPadding = 52; // Space for Y-axis labels
+    const rightPadding = 25; // Right margin for X-axis labels
+    const calibrationOffset = -12; // Fine-tune adjustment to align with data points
+
+    // Account for left padding and calibration offset to get position in data area
+    const dataAreaX = xPosition - leftPadding + calibrationOffset;
+
+    // Data area width (where actual data points are rendered)
+    const dataAreaWidth = chartWidth - leftPadding - rightPadding;
+
+    // Handle edge cases
+    if (dataAreaX < 0) return 0;
+    if (dataAreaX >= dataAreaWidth) return 95;
+
+    // Calculate spacing: 96 points create 95 intervals
+    const spacingBetweenPoints = dataAreaWidth / 95;
+
+    // Calculate which data point is at this position
+    // Point 0 is at leftPadding, point 95 is at leftPadding + dataAreaWidth
+    const rawIndex = dataAreaX / spacingBetweenPoints;
+    // Use floor with small offset to prevent rounding to next index
+    const index = Math.floor(rawIndex + 0.2);
+
+    // Clamp between 0 and 95
+    return Math.max(0, Math.min(95, index));
+  };
+
+  // Calculate which data point is at the center of the visible area
+  const calculateCenterIndex = (scrollX: number) => {
+    // Visible chart width (accounting for card padding: 16px on each side = 32px total)
+    const visibleChartWidth = screenWidth - 48;
+    // Center of visible chart area
+    const visibleCenterX = visibleChartWidth / 2;
+    // Absolute position in the chart (scroll position + center of visible area)
+    const absoluteX = scrollX + visibleCenterX;
+
+    // Use unified calculation function
+    return calculateIndexFromXPosition(absoluteX);
+  };
+
+  // Handle scroll to update selected value based on center position
+  const handleScroll = (event: any) => {
+    const scrollX = event.nativeEvent.contentOffset.x;
+    scrollOffsetRef.current = scrollX;
+
+    // Calculate which data point is at the center
+    const centerIndex = calculateCenterIndex(scrollX);
+    setCurrentScrollIndex(centerIndex);
+    setSelectedIndex(centerIndex);
+  };
+
+  // Handle touch on chart to show values
+  const handleChartTouchStart = (evt: any) => {
+    const { locationX } = evt.nativeEvent;
+    touchStartTimeRef.current = Date.now();
+    touchStartXRef.current = locationX;
+  };
+
+  const handleChartTouchEnd = (evt: any) => {
+    // Don't update if user is scrolling
+    if (isScrollingRef.current) return;
+
+    const touchDuration = Date.now() - touchStartTimeRef.current;
+    const { locationX } = evt.nativeEvent;
+    const touchDistance = Math.abs(locationX - touchStartXRef.current);
+
+    // Only treat as tap if it's quick (< 200ms) and didn't move much (< 10px)
+    if (touchDuration < 200 && touchDistance < 10) {
+      // Add scroll offset to get absolute position in chart
+      const absoluteX = locationX + scrollOffsetRef.current;
+      // Use unified calculation function
+      const index = calculateIndexFromXPosition(absoluteX);
+      setSelectedIndex(index);
+      setCurrentScrollIndex(index);
+    }
+  };
+
+  // Get selected value details
+  const getSelectedValueDetails = () => {
+    if (selectedIndex === null) return null;
+
+    const usage = quarterHourData[selectedIndex];
+    const thresholdValue = threshold / 96;
+    const isUnderLimit = usage < thresholdValue;
+
+    return {
+      time: formatTimeFromIndex(selectedIndex),
+      usage: usage.toFixed(3),
+      threshold: thresholdValue.toFixed(3),
+      isUnderLimit,
+      difference: Math.abs(usage - thresholdValue).toFixed(3),
+    };
+  };
+
+  // Memoize labels to prevent regeneration on each render
+  const chartLabels = useMemo(() => generateQuarterHourLabels(), []);
+
+  // Memoize chartData to prevent regeneration on each render
+  const chartData = useMemo(
+    () => ({
+      labels: chartLabels,
+      datasets: [
+        {
+          data: quarterHourData,
+          color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+          strokeWidth: 3,
+        },
+        {
+          data: thresholdData,
+          color: (opacity = 1) => `rgba(239, 68, 68, ${opacity})`,
+          strokeWidth: 2,
+          withDots: false,
+        },
+      ],
+    }),
+    [chartLabels, quarterHourData, thresholdData],
+  );
 
   const chartConfig = {
     backgroundColor: '#1f2937',
@@ -138,15 +325,152 @@ export default function DashboardScreen() {
 
       {/* Daily Consumption Chart */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Daily Consumption</Text>
-        <LineChart
-          data={chartData}
-          width={screenWidth - 48}
-          height={220}
-          chartConfig={chartConfig}
-          bezier
-          style={styles.chart}
-        />
+        <View style={styles.cardTitleRow}>
+          <Text style={styles.cardTitle}>Daily Consumption</Text>
+          {selectedIndex === null && (
+            <Text style={styles.chartHint}>👆 Tap on chart to see values</Text>
+          )}
+        </View>
+
+        {/* Selected Value Display */}
+        {selectedIndex !== null && getSelectedValueDetails() && (
+          <View
+            style={[
+              styles.selectedValueCard,
+              getSelectedValueDetails()?.isUnderLimit
+                ? styles.selectedValueCardSuccess
+                : styles.selectedValueCardWarning,
+            ]}
+          >
+            <View style={styles.selectedValueHeader}>
+              <Text style={styles.selectedValueTitle}>
+                📊 Selected Time: {getSelectedValueDetails()?.time}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setSelectedIndex(null)}
+                style={styles.selectedValueClose}
+              >
+                <Text style={styles.selectedValueCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.selectedValueContent}>
+              <View style={styles.selectedValueRow}>
+                <View style={styles.selectedValueItem}>
+                  <Text style={styles.selectedValueLabel}>Your Usage</Text>
+                  <Text style={styles.selectedValueNumber}>
+                    {getSelectedValueDetails()?.usage} kWh
+                  </Text>
+                </View>
+                <View style={styles.selectedValueDivider} />
+                <View style={styles.selectedValueItem}>
+                  <Text style={styles.selectedValueLabel}>Threshold</Text>
+                  <Text style={styles.selectedValueNumber}>
+                    {getSelectedValueDetails()?.threshold} kWh
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.selectedValueStatusRow}>
+                <Text style={styles.selectedValueStatusLabel}>Status:</Text>
+                <View
+                  style={[
+                    styles.selectedValueStatusBadge,
+                    getSelectedValueDetails()?.isUnderLimit
+                      ? styles.selectedValueStatusBadgeSuccess
+                      : styles.selectedValueStatusBadgeWarning,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.selectedValueStatusText,
+                      getSelectedValueDetails()?.isUnderLimit
+                        ? styles.selectedValueStatusTextSuccess
+                        : styles.selectedValueStatusTextWarning,
+                    ]}
+                  >
+                    {getSelectedValueDetails()?.isUnderLimit
+                      ? '✓ Under Limit'
+                      : '⚠ Over Limit'}
+                  </Text>
+                </View>
+                <Text style={styles.selectedValueDifference}>
+                  ({getSelectedValueDetails()?.isUnderLimit ? '-' : '+'}
+                  {getSelectedValueDetails()?.difference} kWh)
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        <View style={styles.chartContainer}>
+          <View style={styles.chartWrapper}>
+            <ScrollView
+              ref={scrollViewRef}
+              horizontal
+              showsHorizontalScrollIndicator={true}
+              contentContainerStyle={styles.chartScrollContainer}
+              style={styles.chartScrollView}
+              scrollEventThrottle={16}
+              onScroll={handleScroll}
+              onScrollBeginDrag={() => {
+                isScrollingRef.current = true;
+              }}
+              onScrollEndDrag={() => {
+                setTimeout(() => {
+                  isScrollingRef.current = false;
+                }, 100);
+              }}
+              onMomentumScrollEnd={() => {
+                setTimeout(() => {
+                  isScrollingRef.current = false;
+                }, 100);
+              }}
+            >
+              <View
+                style={styles.chartTouchArea}
+                onTouchStart={handleChartTouchStart}
+                onTouchEnd={handleChartTouchEnd}
+              >
+                <LineChart
+                  data={chartData}
+                  width={chartWidth}
+                  height={220}
+                  chartConfig={chartConfig}
+                  bezier
+                  style={styles.chart}
+                  withInnerLines={true}
+                  withOuterLines={true}
+                  withVerticalLines={false}
+                  withHorizontalLines={true}
+                />
+              </View>
+            </ScrollView>
+
+            {/* Dashed Vertical Line Indicator */}
+            {currentScrollIndex !== null && (
+              <View style={styles.verticalLineContainer} pointerEvents="none">
+                <Svg
+                  height={220}
+                  width={screenWidth - 48}
+                  style={styles.verticalLineSvg}
+                >
+                  <Line
+                    x1={(screenWidth - 48) / 2}
+                    y1={0}
+                    x2={(screenWidth - 48) / 2}
+                    y2={180}
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    strokeDasharray="5,5"
+                    opacity={0.8}
+                  />
+                </Svg>
+              </View>
+            )}
+          </View>
+        </View>
+
         <View style={styles.legend}>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#3b82f6' }]} />
@@ -453,14 +777,162 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
+  cardTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   cardTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#ffffff',
   },
+  chartHint: {
+    fontSize: 12,
+    color: '#9ca3af',
+    fontStyle: 'italic',
+  },
+  chartContainer: {
+    position: 'relative',
+  },
+  chartWrapper: {
+    position: 'relative',
+  },
+  chartScrollView: {
+    marginTop: 0,
+    marginBottom: 8,
+  },
+  chartScrollContainer: {
+    paddingRight: 16,
+  },
+  chartTouchArea: {
+    position: 'relative',
+  },
   chart: {
-    marginVertical: 8,
     borderRadius: 16,
+  },
+  verticalLineContainer: {
+    position: 'absolute',
+    top: 8,
+    left: 0,
+    right: 0,
+    height: 220,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: 'none',
+  },
+  verticalLineSvg: {
+    position: 'absolute',
+  },
+  selectedValueCard: {
+    marginTop: 12,
+    marginBottom: 0,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+  },
+  selectedValueCardSuccess: {
+    backgroundColor: 'rgba(6, 78, 59, 0.3)',
+    borderColor: 'rgba(5, 150, 105, 0.6)',
+  },
+  selectedValueCardWarning: {
+    backgroundColor: 'rgba(127, 29, 29, 0.3)',
+    borderColor: 'rgba(185, 28, 28, 0.6)',
+  },
+  selectedValueHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  selectedValueTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  selectedValueClose: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectedValueCloseText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9ca3af',
+  },
+  selectedValueContent: {
+    gap: 12,
+  },
+  selectedValueRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  selectedValueItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  selectedValueDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#374151',
+    marginHorizontal: 16,
+  },
+  selectedValueLabel: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginBottom: 4,
+  },
+  selectedValueNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  selectedValueStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#374151',
+  },
+  selectedValueStatusLabel: {
+    fontSize: 14,
+    color: '#9ca3af',
+  },
+  selectedValueStatusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  selectedValueStatusBadgeSuccess: {
+    backgroundColor: 'rgba(5, 150, 105, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(5, 150, 105, 0.4)',
+  },
+  selectedValueStatusBadgeWarning: {
+    backgroundColor: 'rgba(185, 28, 28, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(185, 28, 28, 0.4)',
+  },
+  selectedValueStatusText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  selectedValueStatusTextSuccess: {
+    color: '#86efac',
+  },
+  selectedValueStatusTextWarning: {
+    color: '#fca5a5',
+  },
+  selectedValueDifference: {
+    fontSize: 12,
+    color: '#9ca3af',
   },
   legend: {
     flexDirection: 'row',
