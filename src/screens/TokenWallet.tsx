@@ -380,7 +380,7 @@ export default function TokenWalletScreen() {
                 style={[styles.modalButtonPrimary, styles.orangeButton]}
               >
                 <Text style={styles.modalButtonPrimaryText}>
-                  Confirm Offset ({penaltyAmount} tokens)
+                  Confirm Offset{'\n'}({penaltyAmount} tokens)
                 </Text>
               </TouchableOpacity>
             </View>
