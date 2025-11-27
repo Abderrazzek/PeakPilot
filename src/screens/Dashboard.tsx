@@ -60,7 +60,7 @@ export default function DashboardScreen() {
       contentContainerStyle={{ paddingTop: insets.top }}
     >
       <View style={styles.header}>
-        <Text style={styles.title}>Smart Energy Companion</Text>
+        <Text style={styles.title}>Peak Pilot</Text>
         <Text style={styles.subtitle}>Track your energy, earn rewards</Text>
       </View>
 

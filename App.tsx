@@ -1,5 +1,5 @@
 /**
- * PeakPilot - Smart Energy Companion App
+ * PeakPilot - Peak PilotApp
  *
  * @format
  */
@@ -14,7 +14,11 @@ function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar barStyle="light-content" backgroundColor="#000000" translucent />
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor="#000000"
+          translucent
+        />
         <AppNavigator />
       </SafeAreaProvider>
     </GestureHandlerRootView>

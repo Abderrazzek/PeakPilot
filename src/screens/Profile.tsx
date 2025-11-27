@@ -25,23 +25,58 @@ const profileSections = [
     title: 'Account Information',
     items: [
       { icon: User, label: 'Name', value: 'John Smith', color: '#3b82f6' },
-      { icon: Mail, label: 'Email', value: 'john.smith@email.com', color: '#3b82f6' },
-      { icon: Phone, label: 'Phone', value: '+1 (555) 123-4567', color: '#3b82f6' },
-      { icon: MapPin, label: 'Address', value: '123 Main St, City, ST', color: '#3b82f6' },
+      {
+        icon: Mail,
+        label: 'Email',
+        value: 'john.smith@email.com',
+        color: '#3b82f6',
+      },
+      {
+        icon: Phone,
+        label: 'Phone',
+        value: '+1 (555) 123-4567',
+        color: '#3b82f6',
+      },
+      {
+        icon: MapPin,
+        label: 'Address',
+        value: '123 Main St, City, ST',
+        color: '#3b82f6',
+      },
     ],
   },
   {
     title: 'Account Settings',
     items: [
-      { icon: CreditCard, label: 'Billing & Payments', color: '#22c55e', hasChevron: true },
-      { icon: Bell, label: 'Notifications', color: '#f59e0b', hasChevron: true },
-      { icon: Shield, label: 'Privacy & Security', color: '#8b5cf6', hasChevron: true },
+      {
+        icon: CreditCard,
+        label: 'Billing & Payments',
+        color: '#22c55e',
+        hasChevron: true,
+      },
+      {
+        icon: Bell,
+        label: 'Notifications',
+        color: '#f59e0b',
+        hasChevron: true,
+      },
+      {
+        icon: Shield,
+        label: 'Privacy & Security',
+        color: '#8b5cf6',
+        hasChevron: true,
+      },
     ],
   },
   {
     title: 'Support',
     items: [
-      { icon: HelpCircle, label: 'Help Center', color: '#06b6d4', hasChevron: true },
+      {
+        icon: HelpCircle,
+        label: 'Help Center',
+        color: '#06b6d4',
+        hasChevron: true,
+      },
       { icon: LogOut, label: 'Log Out', color: '#ef4444', hasChevron: false },
     ],
   },
@@ -50,7 +85,10 @@ const profileSections = [
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingTop: insets.top }}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingTop: insets.top }}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
         <Text style={styles.subtitle}>Manage your account settings</Text>
@@ -100,18 +138,28 @@ export default function ProfileScreen() {
                   key={itemIndex}
                   style={[
                     styles.settingItem,
-                    itemIndex < section.items.length - 1 && styles.settingItemBorder,
+                    itemIndex < section.items.length - 1 &&
+                      styles.settingItemBorder,
                   ]}
                   activeOpacity={0.7}
                 >
-                  <View style={[styles.settingIcon, { backgroundColor: item.color + '20' }]}>
+                  <View
+                    style={[
+                      styles.settingIcon,
+                      { backgroundColor: item.color + '20' },
+                    ]}
+                  >
                     <Icon color={item.color} size={20} />
                   </View>
                   <View style={styles.settingContent}>
                     <Text style={styles.settingLabel}>{item.label}</Text>
-                    {item.value && <Text style={styles.settingValue}>{item.value}</Text>}
+                    {item.value && (
+                      <Text style={styles.settingValue}>{item.value}</Text>
+                    )}
                   </View>
-                  {item.hasChevron && <ChevronRight color="#6b7280" size={20} />}
+                  {item.hasChevron && (
+                    <ChevronRight color="#6b7280" size={20} />
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -121,7 +169,7 @@ export default function ProfileScreen() {
 
       {/* App Info */}
       <View style={styles.appInfo}>
-        <Text style={styles.appInfoText}>Smart Energy Companion</Text>
+        <Text style={styles.appInfoText}>Peak Pilot</Text>
         <Text style={styles.appInfoText}>Version 1.0.0</Text>
       </View>
 
