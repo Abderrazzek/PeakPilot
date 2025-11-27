@@ -21,7 +21,8 @@ export default function DashboardScreen() {
   const isUnderThreshold = currentUsage < threshold;
   const tokensEarned = isUnderThreshold ? 15 : 0;
   const penalty = !isUnderThreshold ? 8 : 0;
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  // Initialize with index 0 to show the box from the beginning
+  const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
   // Generate quarter-hour labels for one full day (96 intervals)
   // Provide 96 labels but only show text for every hour (every 4th label) for readability
@@ -85,6 +86,11 @@ export default function DashboardScreen() {
   // This gives us ~1728 pixels width, ensuring more space between values
   const chartWidth = Math.max(screenWidth - 48, 96 * 18);
 
+  // Calculate padding to allow first and last values to be centered
+  // Padding should be half the visible width on each side
+  const visibleChartWidth = screenWidth - 48;
+  const scrollPadding = visibleChartWidth / 2;
+
   // Format time from index (quarter-hour index to time string)
   const formatTimeFromIndex = (index: number): string => {
     const hour = Math.floor(index / 4);
@@ -99,9 +105,8 @@ export default function DashboardScreen() {
   const scrollOffsetRef = useRef(0);
   const touchStartTimeRef = useRef(0);
   const touchStartXRef = useRef(0);
-  const [currentScrollIndex, setCurrentScrollIndex] = useState<number | null>(
-    null,
-  );
+  // Initialize with index 0 to show the dashed line from the beginning
+  const [currentScrollIndex, setCurrentScrollIndex] = useState<number>(0);
 
   // Calculate which data point is at a given X position in the chart
   const calculateIndexFromXPosition = (xPosition: number) => {
@@ -136,12 +141,11 @@ export default function DashboardScreen() {
 
   // Calculate which data point is at the center of the visible area
   const calculateCenterIndex = (scrollX: number) => {
-    // Visible chart width (accounting for card padding: 16px on each side = 32px total)
-    const visibleChartWidth = screenWidth - 48;
     // Center of visible chart area
     const visibleCenterX = visibleChartWidth / 2;
-    // Absolute position in the chart (scroll position + center of visible area)
-    const absoluteX = scrollX + visibleCenterX;
+    // Account for scroll padding - the chart content starts after the padding
+    // Absolute position in the chart (scroll position + center of visible area - padding offset)
+    const absoluteX = scrollX + visibleCenterX - scrollPadding;
 
     // Use unified calculation function
     return calculateIndexFromXPosition(absoluteX);
@@ -327,13 +331,10 @@ export default function DashboardScreen() {
       <View style={styles.card}>
         <View style={styles.cardTitleRow}>
           <Text style={styles.cardTitle}>Daily Consumption</Text>
-          {selectedIndex === null && (
-            <Text style={styles.chartHint}>👆 Tap on chart to see values</Text>
-          )}
         </View>
 
-        {/* Selected Value Display */}
-        {selectedIndex !== null && getSelectedValueDetails() && (
+        {/* Selected Value Display - Always visible */}
+        {getSelectedValueDetails() && (
           <View
             style={[
               styles.selectedValueCard,
@@ -344,14 +345,8 @@ export default function DashboardScreen() {
           >
             <View style={styles.selectedValueHeader}>
               <Text style={styles.selectedValueTitle}>
-                📊 Selected Time: {getSelectedValueDetails()?.time}
+                Selected Time: {getSelectedValueDetails()?.time}
               </Text>
-              <TouchableOpacity
-                onPress={() => setSelectedIndex(null)}
-                style={styles.selectedValueClose}
-              >
-                <Text style={styles.selectedValueCloseText}>✕</Text>
-              </TouchableOpacity>
             </View>
 
             <View style={styles.selectedValueContent}>
@@ -408,8 +403,14 @@ export default function DashboardScreen() {
             <ScrollView
               ref={scrollViewRef}
               horizontal
-              showsHorizontalScrollIndicator={true}
-              contentContainerStyle={styles.chartScrollContainer}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[
+                styles.chartScrollContainer,
+                {
+                  paddingLeft: scrollPadding,
+                  paddingRight: scrollPadding,
+                },
+              ]}
               style={styles.chartScrollView}
               scrollEventThrottle={16}
               onScroll={handleScroll}
