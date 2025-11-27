@@ -9,6 +9,7 @@ import {
   TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import {
   Coins,
   User,
@@ -20,18 +21,66 @@ import {
 } from 'lucide-react-native';
 
 const tokenHistory = [
-  { id: 1, type: 'earned', amount: 15, description: 'Below threshold - Nov 27', date: '2025-11-27' },
-  { id: 2, type: 'earned', amount: 18, description: 'Below threshold - Nov 26', date: '2025-11-26' },
-  { id: 3, type: 'spent', amount: -50, description: 'EV Charging discount', date: '2025-11-25' },
-  { id: 4, type: 'earned', amount: 12, description: 'Off-peak usage bonus', date: '2025-11-24' },
-  { id: 5, type: 'transferred', amount: -30, description: 'Transferred to @sarah_m', date: '2025-11-23' },
-  { id: 6, type: 'earned', amount: 20, description: 'Weekly streak bonus', date: '2025-11-22' },
+  {
+    id: 1,
+    type: 'earned',
+    amount: 15,
+    description: 'Below threshold - Nov 27',
+    date: '2025-11-27',
+  },
+  {
+    id: 2,
+    type: 'earned',
+    amount: 18,
+    description: 'Below threshold - Nov 26',
+    date: '2025-11-26',
+  },
+  {
+    id: 3,
+    type: 'spent',
+    amount: -50,
+    description: 'EV Charging discount',
+    date: '2025-11-25',
+  },
+  {
+    id: 4,
+    type: 'earned',
+    amount: 12,
+    description: 'Off-peak usage bonus',
+    date: '2025-11-24',
+  },
+  {
+    id: 5,
+    type: 'transferred',
+    amount: -30,
+    description: 'Transferred to @sarah_m',
+    date: '2025-11-23',
+  },
+  {
+    id: 6,
+    type: 'earned',
+    amount: 20,
+    description: 'Weekly streak bonus',
+    date: '2025-11-22',
+  },
 ];
 
 const partnerOffers = [
   { id: 1, name: 'EV Charging', discount: '20% off', tokens: 100, icon: '⚡' },
-  { id: 2, name: 'Smart Thermostat', discount: '$50 off', tokens: 500, icon: '🌡️' },
-  { id: 3, name: 'Solar Panel Consultation', discount: 'Free assessment', tokens: 300, icon: '☀️' },
+  {
+    id: 2,
+    name: 'Smart Thermostat',
+    discount: '$50 off',
+    tokens: 500,
+    icon: '🌡️',
+  },
+  {
+    id: 3,
+    name: 'Solar Panel Consultation',
+    discount: 'Free assessment',
+    tokens: 300,
+    icon: '☀️',
+  },
   { id: 4, name: 'Energy Audit', discount: '50% off', tokens: 150, icon: '📊' },
 ];
 
@@ -44,7 +93,7 @@ export default function TokenWalletScreen() {
   const totalTokens = 1247;
   const tokenValue = (totalTokens * 0.05).toFixed(2);
   const penaltyAmount = 490;
-  const penaltyCost = 24.50;
+  const penaltyCost = 24.5;
   const remainingTokens = totalTokens - penaltyAmount;
 
   const getIconForTransaction = (type: string) => {
@@ -61,7 +110,10 @@ export default function TokenWalletScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingTop: insets.top }}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingTop: insets.top }}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>Token Wallet</Text>
         <Text style={styles.subtitle}>Manage your energy rewards</Text>
@@ -69,35 +121,43 @@ export default function TokenWalletScreen() {
 
       {/* Balance Card */}
       <View style={styles.balanceCard}>
-        <View style={styles.balanceHeader}>
-          <View style={styles.coinIcon}>
-            <Coins color="#ffffff" size={32} />
+        <LinearGradient
+          colors={['#D0B100', '#FF6900']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.balanceCardContent}>
+          <View style={styles.balanceHeader}>
+            <View style={styles.coinIcon}>
+              <Coins color="#ffffff" size={32} />
+            </View>
+            <View style={styles.tokenValueContainer}>
+              <Text style={styles.tokenValueLabel}>Token Value</Text>
+              <Text style={styles.tokenValueAmount}>${tokenValue}</Text>
+            </View>
           </View>
-          <View style={styles.tokenValueContainer}>
-            <Text style={styles.tokenValueLabel}>Token Value</Text>
-            <Text style={styles.tokenValueAmount}>${tokenValue}</Text>
+
+          <Text style={styles.balanceLabel}>Total Balance</Text>
+          <Text style={styles.balanceAmount}>{totalTokens}</Text>
+
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => setTransferModalVisible(true)}
+            >
+              <User color="#ffffff" size={16} />
+              <Text style={styles.actionButtonText}>Transfer</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => setOffsetModalVisible(true)}
+            >
+              <Gift color="#ffffff" size={16} />
+              <Text style={styles.actionButtonText}>Offset Bill</Text>
+            </TouchableOpacity>
           </View>
-        </View>
-
-        <Text style={styles.balanceLabel}>Total Balance</Text>
-        <Text style={styles.balanceAmount}>{totalTokens}</Text>
-
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => setTransferModalVisible(true)}
-          >
-            <User color="#ffffff" size={16} />
-            <Text style={styles.actionButtonText}>Transfer</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => setOffsetModalVisible(true)}
-          >
-            <Gift color="#ffffff" size={16} />
-            <Text style={styles.actionButtonText}>Offset Bill</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -107,7 +167,12 @@ export default function TokenWalletScreen() {
           style={[styles.tab, activeTab === 'history' && styles.activeTab]}
           onPress={() => setActiveTab('history')}
         >
-          <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'history' && styles.activeTabText,
+            ]}
+          >
             History
           </Text>
         </TouchableOpacity>
@@ -115,7 +180,12 @@ export default function TokenWalletScreen() {
           style={[styles.tab, activeTab === 'offers' && styles.activeTab]}
           onPress={() => setActiveTab('offers')}
         >
-          <Text style={[styles.tabText, activeTab === 'offers' && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'offers' && styles.activeTabText,
+            ]}
+          >
             Partner Offers
           </Text>
         </TouchableOpacity>
@@ -124,7 +194,7 @@ export default function TokenWalletScreen() {
       {/* History Tab */}
       {activeTab === 'history' && (
         <View style={styles.tabContent}>
-          {tokenHistory.map((transaction) => {
+          {tokenHistory.map(transaction => {
             const isPositive = transaction.amount > 0;
             return (
               <View key={transaction.id} style={styles.transactionCard}>
@@ -143,7 +213,9 @@ export default function TokenWalletScreen() {
                   </Text>
                   <View style={styles.transactionDate}>
                     <Calendar color="#6b7280" size={12} />
-                    <Text style={styles.transactionDateText}>{transaction.date}</Text>
+                    <Text style={styles.transactionDateText}>
+                      {transaction.date}
+                    </Text>
                   </View>
                 </View>
 
@@ -165,7 +237,7 @@ export default function TokenWalletScreen() {
       {/* Offers Tab */}
       {activeTab === 'offers' && (
         <View style={styles.tabContent}>
-          {partnerOffers.map((offer) => (
+          {partnerOffers.map(offer => (
             <View key={offer.id} style={styles.offerCard}>
               <Text style={styles.offerIcon}>{offer.icon}</Text>
               <View style={styles.offerDetails}>
@@ -182,7 +254,8 @@ export default function TokenWalletScreen() {
                 <Text
                   style={[
                     styles.offerButtonText,
-                    totalTokens < offer.tokens && styles.offerButtonTextDisabled,
+                    totalTokens < offer.tokens &&
+                      styles.offerButtonTextDisabled,
                   ]}
                 >
                   {offer.tokens} tokens
@@ -256,7 +329,11 @@ export default function TokenWalletScreen() {
 
             <View style={styles.warningBanner}>
               <View style={styles.warningContent}>
-                <AlertCircle color="#fca5a5" size={20} style={{ marginTop: 2 }} />
+                <AlertCircle
+                  color="#fca5a5"
+                  size={20}
+                  style={{ marginTop: 2 }}
+                />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.warningTitle}>
                     Current Penalty: ${penaltyCost.toFixed(2)}
@@ -287,7 +364,9 @@ export default function TokenWalletScreen() {
 
             <View style={styles.modalInfo}>
               <Text style={styles.modalInfoLabel}>After offset:</Text>
-              <Text style={styles.modalInfoValue}>{remainingTokens} tokens</Text>
+              <Text style={styles.modalInfoValue}>
+                {remainingTokens} tokens
+              </Text>
             </View>
 
             <View style={styles.modalButtons}>
@@ -297,7 +376,9 @@ export default function TokenWalletScreen() {
               >
                 <Text style={styles.modalButtonSecondaryText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButtonPrimary, styles.orangeButton]}>
+              <TouchableOpacity
+                style={[styles.modalButtonPrimary, styles.orangeButton]}
+              >
                 <Text style={styles.modalButtonPrimaryText}>
                   Confirm Offset ({penaltyAmount} tokens)
                 </Text>
@@ -333,11 +414,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   balanceCard: {
-    backgroundColor: '#eab308',
     borderRadius: 16,
-    padding: 24,
     marginHorizontal: 16,
     marginBottom: 16,
+    overflow: 'hidden',
+  },
+  balanceCardContent: {
+    padding: 24,
   },
   balanceHeader: {
     flexDirection: 'row',
