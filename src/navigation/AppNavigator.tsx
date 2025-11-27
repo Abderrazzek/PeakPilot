@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Coins, Award, Bot, User } from 'lucide-react-native';
 
 import DashboardScreen from '../screens/Dashboard';
@@ -12,6 +13,7 @@ import ProfileScreen from '../screens/Profile';
 const Tab = createBottomTabNavigator();
 
 export default function AppNavigator() {
+  const insets = useSafeAreaInsets();
   return (
     <NavigationContainer>
       <Tab.Navigator
@@ -23,9 +25,9 @@ export default function AppNavigator() {
             backgroundColor: '#111827',
             borderTopColor: '#1f2937',
             borderTopWidth: 1,
-            paddingBottom: 8,
+            paddingBottom: Math.max(insets.bottom, 8),
             paddingTop: 8,
-            height: 60,
+            height: 60 + Math.max(insets.bottom - 8, 0),
           },
           tabBarLabelStyle: {
             fontSize: 12,

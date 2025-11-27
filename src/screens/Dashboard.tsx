@@ -7,15 +7,16 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LineChart } from 'react-native-chart-kit';
-import { Zap, TrendingDown, Coins, AlertTriangle, Lightbulb, Info, Clock } from 'lucide-react-native';
+import { Zap, Coins, Lightbulb, Info, Clock } from 'lucide-react-native';
 
 const screenWidth = Dimensions.get('window').width;
 
 export default function DashboardScreen() {
+  const insets = useSafeAreaInsets();
   const currentUsage = 24.6;
   const threshold = 30;
-  const percentage = (currentUsage / threshold) * 100;
   const isUnderThreshold = currentUsage < threshold;
   const tokensEarned = isUnderThreshold ? 15 : 0;
   const penalty = !isUnderThreshold ? 8 : 0;
@@ -54,41 +55,47 @@ export default function DashboardScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingTop: insets.top }}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>Smart Energy Companion</Text>
         <Text style={styles.subtitle}>Track your energy, earn rewards</Text>
       </View>
 
       {/* Status Card */}
-      <View style={[
-        styles.card,
-        isUnderThreshold ? styles.cardSuccess : styles.cardWarning
-      ]}>
+      <View
+        style={[
+          styles.card,
+          isUnderThreshold ? styles.cardSuccess : styles.cardWarning,
+        ]}
+      >
         <View style={styles.statusContent}>
           <View style={styles.consumptionInfo}>
             <Text style={styles.consumptionLabel}>Yesterday's Consumption</Text>
             <View style={styles.consumptionValueContainer}>
-              <Text style={[
-                styles.consumptionValue,
-                isUnderThreshold ? styles.textSuccess : styles.textDanger
-              ]}>
+              <Text
+                style={[
+                  styles.consumptionValue,
+                  isUnderThreshold ? styles.textSuccess : styles.textDanger,
+                ]}
+              >
                 {currentUsage.toFixed(1)}
               </Text>
               <Text style={styles.consumptionUnit}>kWh</Text>
             </View>
             <Text style={styles.thresholdLimit}>/ {threshold} kWh limit</Text>
           </View>
-          
+
           <View style={styles.tokenInfo}>
-            <Coins 
-              color={isUnderThreshold ? '#eab308' : '#6b7280'} 
-              size={20} 
-            />
-            <Text style={[
-              styles.tokenValue,
-              isUnderThreshold ? styles.textSuccess : styles.textDanger
-            ]}>
+            <Coins color={isUnderThreshold ? '#eab308' : '#6b7280'} size={20} />
+            <Text
+              style={[
+                styles.tokenValue,
+                isUnderThreshold ? styles.textSuccess : styles.textDanger,
+              ]}
+            >
               {isUnderThreshold ? `+${tokensEarned}` : `-${penalty}`}
             </Text>
           </View>
@@ -100,7 +107,7 @@ export default function DashboardScreen() {
         <View style={styles.nextActionIconContainer}>
           <Lightbulb color="#ffffff" size={24} />
         </View>
-        
+
         <View style={styles.nextActionContent}>
           <View style={styles.nextActionHeader}>
             <Text style={styles.nextActionTitle}>Next Action</Text>
@@ -108,17 +115,20 @@ export default function DashboardScreen() {
               <Text style={styles.aiBadgeText}>AI Recommended</Text>
             </View>
           </View>
-          
+
           <Text style={styles.nextActionMessage}>
-            💡 Delay running your dishwasher until 6 PM to earn 3 extra tokens during the evening collection window.
+            💡 Delay running your dishwasher until 6 PM to earn 3 extra tokens
+            during the evening collection window.
           </Text>
-          
+
           <View style={styles.nextActionFooter}>
             <View style={styles.potentialReward}>
               <Coins color="#eab308" size={16} />
-              <Text style={styles.potentialRewardText}>+3 tokens potential</Text>
+              <Text style={styles.potentialRewardText}>
+                +3 tokens potential
+              </Text>
             </View>
-            
+
             <TouchableOpacity style={styles.gotItButton}>
               <Text style={styles.gotItButtonText}>Got it</Text>
             </TouchableOpacity>
@@ -147,7 +157,7 @@ export default function DashboardScreen() {
             <Text style={styles.legendText}>Threshold</Text>
           </View>
         </View>
-        
+
         {/* Token Collection Info */}
         <View style={styles.tokenWindowInfo}>
           <View style={styles.tokenWindowBadge}>
@@ -165,24 +175,26 @@ export default function DashboardScreen() {
         </View>
         <View style={styles.infoContent}>
           <Text style={styles.infoTitle}>How to Earn Tokens</Text>
-          
+
           <View style={styles.infoSection}>
             <Clock color="#eab308" size={16} style={styles.infoIcon} />
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoHighlight}>
-                Token Collection Windows: <Text style={styles.infoValue}>6-9 AM & 6-11 PM</Text>
+                Token Collection Windows:{' '}
+                <Text style={styles.infoValue}>6-9 AM & 6-11 PM</Text>
               </Text>
               <Text style={styles.infoSubtext}>
                 Stay below your threshold during these times to earn tokens
               </Text>
             </View>
           </View>
-          
+
           <View style={styles.infoSection}>
             <Zap color="#60a5fa" size={16} style={styles.infoIcon} />
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoHighlight}>
-                Outside Windows: <Text style={styles.infoValue}>Use energy freely</Text>
+                Outside Windows:{' '}
+                <Text style={styles.infoValue}>Use energy freely</Text>
               </Text>
               <Text style={styles.infoSubtext}>
                 Consumption outside these windows doesn't affect tokens
@@ -208,7 +220,7 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      <View style={styles.bottomPadding} />
+      <View style={[styles.bottomPadding, { paddingBottom: insets.bottom }]} />
     </ScrollView>
   );
 }

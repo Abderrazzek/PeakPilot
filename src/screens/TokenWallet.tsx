@@ -8,6 +8,7 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Coins,
   User,
@@ -35,6 +36,7 @@ const partnerOffers = [
 ];
 
 export default function TokenWalletScreen() {
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<'history' | 'offers'>('history');
   const [transferModalVisible, setTransferModalVisible] = useState(false);
   const [offsetModalVisible, setOffsetModalVisible] = useState(false);
@@ -59,7 +61,7 @@ export default function TokenWalletScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingTop: insets.top }}>
       <View style={styles.header}>
         <Text style={styles.title}>Token Wallet</Text>
         <Text style={styles.subtitle}>Manage your energy rewards</Text>
@@ -305,7 +307,7 @@ export default function TokenWalletScreen() {
         </View>
       </Modal>
 
-      <View style={styles.bottomPadding} />
+      <View style={[styles.bottomPadding, { paddingBottom: insets.bottom }]} />
     </ScrollView>
   );
 }

@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Send, Bot, User as UserIcon } from 'lucide-react-native';
 
 interface Message {
@@ -36,6 +37,7 @@ const quickActions = [
 ];
 
 export default function AIAssistantScreen() {
+  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputText, setInputText] = useState('');
 
@@ -96,7 +98,7 @@ export default function AIAssistantScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
     >
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <View style={styles.headerIcon}>
           <Bot color="#3b82f6" size={24} />
         </View>
@@ -160,7 +162,7 @@ export default function AIAssistantScreen() {
       </View>
 
       {/* Input Area */}
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]}>
         <TextInput
           style={styles.input}
           placeholder="Ask me anything about energy..."

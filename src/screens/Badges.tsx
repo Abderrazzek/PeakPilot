@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Award, Lock } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 
@@ -82,12 +83,13 @@ const getRarityColor = (rarity: string) => {
 };
 
 export default function BadgesScreen() {
+  const insets = useSafeAreaInsets();
   const unlockedCount = badges.filter((b) => b.unlocked).length;
   const totalCount = badges.length;
   const completionPercentage = Math.round((unlockedCount / totalCount) * 100);
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingTop: insets.top }}>
       {/* Hero Header */}
       <View style={styles.hero}>
         <Text style={styles.heroTitle}>Badge Collection</Text>
@@ -184,7 +186,7 @@ export default function BadgesScreen() {
         ))}
       </View>
 
-      <View style={styles.bottomPadding} />
+      <View style={[styles.bottomPadding, { paddingBottom: insets.bottom }]} />
     </ScrollView>
   );
 }

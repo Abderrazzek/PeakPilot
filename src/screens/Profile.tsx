@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   User,
   Mail,
@@ -47,8 +48,9 @@ const profileSections = [
 ];
 
 export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingTop: insets.top }}>
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
         <Text style={styles.subtitle}>Manage your account settings</Text>
@@ -123,7 +125,7 @@ export default function ProfileScreen() {
         <Text style={styles.appInfoText}>Version 1.0.0</Text>
       </View>
 
-      <View style={styles.bottomPadding} />
+      <View style={[styles.bottomPadding, { paddingBottom: insets.bottom }]} />
     </ScrollView>
   );
 }
