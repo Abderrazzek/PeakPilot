@@ -121,7 +121,7 @@
     "totalIntervals": 96,
     "tokenCollectionWindows": {
       "morning": "6:00 AM - 9:00 AM",
-      "evening": "6:00 PM - 11:00 PM"
+      "evening": "6:00 PM - 10:00 PM"
     }
   }
 }

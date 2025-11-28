@@ -10,7 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LineChart } from 'react-native-chart-kit';
 import { Zap, Coins, Lightbulb, Info, Clock } from 'lucide-react-native';
-import Svg, { Line } from 'react-native-svg';
+import Svg, { Line, Path } from 'react-native-svg';
 import mockChartData from '../data/mockChartData.json';
 
 const screenWidth = Dimensions.get('window').width;
@@ -80,13 +80,96 @@ export default function DashboardScreen() {
     return leftPadding + index * spacingBetweenPoints;
   };
 
+  // Calculate Y position for a given data value in the chart
+  // Chart height is 220, but data area is typically 180 (with padding)
+  const getYPositionForValue = (
+    value: number,
+    applyCalibration: boolean = false,
+  ): number => {
+    const topPadding = 20; // Top padding for chart labels
+    const dataAreaHeight = 180; // Height of data area
+    const yCalibrationOffset = -11; // Adjust this value to move bottom boundary up (negative) or down (positive)
+
+    // Find min and max values from all data (chart library includes all datasets)
+    const allDataValues = [...quarterHourData, ...thresholdData];
+    const minValue = Math.min(...allDataValues);
+    const maxValue = Math.max(...allDataValues);
+
+    // Calculate Y position (chart Y increases downward)
+    // Y = topPadding + dataAreaHeight * (1 - (value - minValue) / (maxValue - minValue))
+    if (maxValue === minValue) {
+      const baseY = topPadding + dataAreaHeight / 2;
+      return applyCalibration ? baseY + yCalibrationOffset : baseY;
+    }
+    const normalizedValue = (value - minValue) / (maxValue - minValue);
+    const baseY = topPadding + dataAreaHeight * (1 - normalizedValue);
+    return applyCalibration ? baseY + yCalibrationOffset : baseY;
+  };
+
+  // Get consumption Y value at a given X position (for clipping hatched area to consumption line)
+  // Uses cubic interpolation (Catmull-Rom spline) to better match chart library's bezier curves
+  const getConsumptionYAtX = (xPosition: number): number => {
+    // Convert X position to data index with calibration offset to match chart library
+    const leftPadding = 52;
+    const rightPadding = 25;
+    const xCalibrationOffset = -11; // Fine-tuned offset to align X positions with chart rendering (adjusted 2px to the right)
+    const dataAreaWidth = chartWidth - leftPadding - rightPadding;
+    const spacingBetweenPoints = dataAreaWidth / 95;
+
+    // Account for calibration offset to match chart library's actual rendering
+    const dataAreaX = xPosition - leftPadding + xCalibrationOffset;
+    const exactIndex = dataAreaX / spacingBetweenPoints;
+    const dataIndex = Math.max(0, Math.min(95, exactIndex));
+
+    // Use cubic interpolation (Catmull-Rom spline) for smoother curves that match bezier behavior
+    const lowerIndex = Math.floor(dataIndex);
+    const upperIndex = Math.min(95, Math.ceil(dataIndex));
+    const t = dataIndex - lowerIndex;
+
+    // Handle edge cases: if at exact data point, return that value directly
+    if (t === 0) {
+      return getYPositionForValue(quarterHourData[lowerIndex], true);
+    }
+    if (lowerIndex === upperIndex) {
+      return getYPositionForValue(quarterHourData[lowerIndex], true);
+    }
+
+    // Get surrounding points for cubic interpolation (need 4 points: p0, p1, p2, p3)
+    // Use more points for better curve approximation
+    const p0Index = Math.max(0, lowerIndex - 1);
+    const p1Index = lowerIndex;
+    const p2Index = upperIndex;
+    const p3Index = Math.min(95, upperIndex + 1);
+
+    const p0 = quarterHourData[p0Index];
+    const p1 = quarterHourData[p1Index];
+    const p2 = quarterHourData[p2Index];
+    const p3 = quarterHourData[p3Index];
+
+    // Catmull-Rom spline interpolation with improved smoothness
+    // This produces smoother curves that better match the chart library's bezier rendering
+    const t2 = t * t;
+    const t3 = t2 * t;
+
+    // Catmull-Rom spline formula for smooth bezier-like curves
+    const interpolatedValue =
+      0.5 *
+      (2 * p1 +
+        (-p0 + p2) * t +
+        (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+        (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
+
+    // Convert to Y position with calibration to match chart rendering
+    return getYPositionForValue(interpolatedValue, true);
+  };
+
   // Calculate collection window line positions
   // Morning: 6:00 AM - 9:00 AM (indices 24-35, so lines at 24 and 36)
   // Evening: 6:00 PM - 11:00 PM (indices 72-91, so lines at 72 and 92)
   const morningStartIndex = 6 * 4; // 24 (6:00 AM)
   const morningEndIndex = 9 * 4; // 36 (9:00 AM)
   const eveningStartIndex = 18 * 4; // 72 (6:00 PM)
-  const eveningEndIndex = 23 * 4; // 92 (11:00 PM)
+  const eveningEndIndex = 22 * 4; // 92 (10:00 PM)
 
   const collectionWindowLines = [
     { x: getXPositionForIndex(morningStartIndex), label: '6:00 AM' },
@@ -451,6 +534,66 @@ export default function DashboardScreen() {
                     width={chartWidth}
                     style={styles.collectionWindowLinesSvg}
                   >
+                    {/* Green background zone for 6 AM - 9 AM token collection window */}
+                    {(() => {
+                      const zoneStartX =
+                        getXPositionForIndex(morningStartIndex);
+                      const zoneEndX = getXPositionForIndex(morningEndIndex);
+                      const zoneWidth = zoneEndX - zoneStartX;
+
+                      // Get threshold Y value - use exact value from thresholdData
+                      const thresholdValue = thresholdData[0]; // Same value used in chart
+                      const thresholdYRaw =
+                        getYPositionForValue(thresholdValue);
+                      // Subtract offset to align with threshold line
+                      const thresholdY = thresholdYRaw - 5;
+
+                      // Create smooth green background Path that follows consumption line
+                      // Path: start at threshold (top) -> follow consumption line smoothly -> close back to threshold
+                      const pathPoints: string[] = [];
+
+                      // Start at top-left (threshold line)
+                      pathPoints.push(`M ${zoneStartX} ${thresholdY}`);
+
+                      // Sample extremely densely for ultra-smooth bezier-like curve that matches the chart line
+                      // Very high sample count creates smoother curves that perfectly follow the chart's bezier rendering
+                      const sampleCount = Math.max(
+                        800,
+                        Math.floor(zoneWidth * 8),
+                      );
+                      for (let i = 0; i <= sampleCount; i++) {
+                        const t = i / sampleCount;
+                        // Calculate X position with proper calibration
+                        const x = zoneStartX + t * zoneWidth;
+
+                        // Get consumption Y position - this should exactly match the line chart
+                        // Using calibrated X position to match chart library rendering
+                        const consumptionY = getConsumptionYAtX(x);
+
+                        // Use consumption Y directly to match the consumption line chart exactly
+                        // This ensures the bottom boundary follows the consumption line values precisely
+                        pathPoints.push(`L ${x} ${consumptionY}`);
+                      }
+
+                      // Close path back to threshold line at right edge
+                      pathPoints.push(`L ${zoneEndX} ${thresholdY}`);
+                      pathPoints.push('Z');
+
+                      const backgroundPath = pathPoints.join(' ');
+
+                      return (
+                        <>
+                          {/* Green background - fills area between threshold and consumption line */}
+                          <Path
+                            d={backgroundPath}
+                            fill="#22c55e"
+                            opacity={0.4}
+                          />
+                        </>
+                      );
+                    })()}
+
+                    {/* Collection window boundary lines */}
                     {collectionWindowLines.map((line, index) => (
                       <Line
                         key={index}
