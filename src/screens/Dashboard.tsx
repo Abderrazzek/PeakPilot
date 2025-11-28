@@ -615,77 +615,16 @@ export default function DashboardScreen() {
                     width={chartWidth}
                     style={styles.collectionWindowLinesSvg}
                   >
-                    {/* Green background zone for 6 AM - 9 AM token collection window */}
+                    {/* Orange/Red background for ALL times when consumption exceeds threshold */}
                     {(() => {
-                      const zoneStartX =
-                        getXPositionForIndex(morningStartIndex);
-                      const zoneEndX = getXPositionForIndex(morningEndIndex);
-                      const zoneWidth = zoneEndX - zoneStartX;
+                      const fullDayStartX = getXPositionForIndex(0);
+                      const fullDayEndX = getXPositionForIndex(95);
+                      const fullDayWidth = fullDayEndX - fullDayStartX;
 
-                      // Get threshold Y value - use exact value from thresholdData
-                      const thresholdValue = thresholdData[0]; // Same value used in chart
+                      // Get threshold Y value
+                      const thresholdValue = thresholdData[0];
                       const thresholdYRaw =
                         getYPositionForValue(thresholdValue);
-                      // Subtract offset to align with threshold line
-                      const thresholdY = thresholdYRaw - 5;
-
-                      // Create smooth green background Path that follows consumption line
-                      // Path: start at threshold (top) -> follow consumption line smoothly -> close back to threshold
-                      const pathPoints: string[] = [];
-
-                      // Start at top-left (threshold line)
-                      pathPoints.push(`M ${zoneStartX} ${thresholdY}`);
-
-                      // Sample extremely densely for ultra-smooth bezier-like curve that matches the chart line
-                      // Very high sample count creates smoother curves that perfectly follow the chart's bezier rendering
-                      const sampleCount = Math.max(
-                        800,
-                        Math.floor(zoneWidth * 8),
-                      );
-                      for (let i = 0; i <= sampleCount; i++) {
-                        const t = i / sampleCount;
-                        // Calculate X position with proper calibration
-                        const x = zoneStartX + t * zoneWidth;
-
-                        // Get consumption Y position - this should exactly match the line chart
-                        // Using calibrated X position to match chart library rendering
-                        const consumptionY = getConsumptionYAtX(x);
-
-                        // Use consumption Y directly to match the consumption line chart exactly
-                        // This ensures the bottom boundary follows the consumption line values precisely
-                        pathPoints.push(`L ${x} ${consumptionY}`);
-                      }
-
-                      // Close path back to threshold line at right edge
-                      pathPoints.push(`L ${zoneEndX} ${thresholdY}`);
-                      pathPoints.push('Z');
-
-                      const backgroundPath = pathPoints.join(' ');
-
-                      return (
-                        <>
-                          {/* Green background - fills area between threshold and consumption line */}
-                          <Path
-                            d={backgroundPath}
-                            fill="#22c55e"
-                            opacity={0.4}
-                          />
-                        </>
-                      );
-                    })()}
-
-                    {/* Colored background zone for 6 PM - 10 PM (18:00 - 22:00) token collection window */}
-                    {(() => {
-                      const zoneStartX =
-                        getXPositionForIndex(eveningStartIndex);
-                      const zoneEndX = getXPositionForIndex(eveningEndIndex);
-                      const zoneWidth = zoneEndX - zoneStartX;
-
-                      // Get threshold Y value - use exact value from thresholdData
-                      const thresholdValue = thresholdData[0]; // Same value used in chart
-                      const thresholdYRaw =
-                        getYPositionForValue(thresholdValue);
-                      // Subtract offset to align with threshold line
                       const thresholdY = thresholdYRaw - 5;
 
                       // Convert X position to data index
@@ -704,38 +643,36 @@ export default function DashboardScreen() {
                         );
                       };
 
-                      // Sample extremely densely for ultra-smooth bezier-like curve that matches the chart line
+                      // Sample densely for smooth curves
                       const sampleCount = Math.max(
-                        800,
-                        Math.floor(zoneWidth * 8),
+                        1200,
+                        Math.floor(fullDayWidth * 8),
                       );
 
-                      // Create segments based on penalty values
+                      // Create segments based on penalty values and collection windows
                       const segments: Array<{
                         startX: number;
                         endX: number;
                         penalty: boolean;
+                        inCollectionWindow: boolean;
                         pathPoints: string[];
                       }> = [];
 
                       let currentSegment: {
                         startX: number;
                         penalty: boolean | null;
+                        inCollectionWindow: boolean;
                         pathPoints: string[];
                       } | null = null;
 
                       for (let i = 0; i <= sampleCount; i++) {
                         const t = i / sampleCount;
-                        const x = zoneStartX + t * zoneWidth;
+                        const x = fullDayStartX + t * fullDayWidth;
                         const dataIndex = xToIndex(x);
 
-                        // Only process if within evening window (indices 72-88)
-                        if (
-                          dataIndex < eveningStartIndex ||
-                          dataIndex > eveningEndIndex
-                        ) {
-                          continue;
-                        }
+                        // Check if in collection window
+                        const inCollectionWindow =
+                          isInCollectionWindow(dataIndex);
 
                         // Get consumption Y position
                         const consumptionY = getConsumptionYAtX(x);
@@ -747,10 +684,12 @@ export default function DashboardScreen() {
                         if (isAboveThreshold) {
                           const hasPenalty = penaltiesData[dataIndex] || false;
 
-                          // Start new segment if penalty value changes or no current segment
+                          // Start new segment if penalty value changes, collection window changes, or no current segment
                           if (
                             !currentSegment ||
-                            currentSegment.penalty !== hasPenalty
+                            currentSegment.penalty !== hasPenalty ||
+                            currentSegment.inCollectionWindow !==
+                              inCollectionWindow
                           ) {
                             // Save previous segment if exists
                             if (
@@ -767,6 +706,8 @@ export default function DashboardScreen() {
                                 startX: currentSegment.startX,
                                 endX: x,
                                 penalty: currentSegment.penalty,
+                                inCollectionWindow:
+                                  currentSegment.inCollectionWindow,
                                 pathPoints: [...currentSegment.pathPoints],
                               });
                             }
@@ -775,6 +716,7 @@ export default function DashboardScreen() {
                             currentSegment = {
                               startX: x,
                               penalty: hasPenalty,
+                              inCollectionWindow: inCollectionWindow,
                               pathPoints: [`M ${x} ${thresholdY}`],
                             };
                           }
@@ -801,6 +743,8 @@ export default function DashboardScreen() {
                               startX: currentSegment.startX,
                               endX: x,
                               penalty: currentSegment.penalty,
+                              inCollectionWindow:
+                                currentSegment.inCollectionWindow,
                               pathPoints: [...currentSegment.pathPoints],
                             });
                             currentSegment = null;
@@ -810,48 +754,25 @@ export default function DashboardScreen() {
 
                       // Close last segment if exists
                       if (currentSegment && currentSegment.penalty !== null) {
-                        // Close segment at threshold line
                         currentSegment.pathPoints.push(
-                          `L ${zoneEndX} ${thresholdY}`,
+                          `L ${fullDayEndX} ${thresholdY}`,
                         );
                         currentSegment.pathPoints.push('Z');
 
                         segments.push({
                           startX: currentSegment.startX,
-                          endX: zoneEndX,
+                          endX: fullDayEndX,
                           penalty: currentSegment.penalty,
+                          inCollectionWindow: currentSegment.inCollectionWindow,
                           pathPoints: [...currentSegment.pathPoints],
                         });
                       }
 
-                      // Create base green path for all areas above threshold (original behavior)
-                      // This matches the original green fill implementation
-                      const greenPathPoints: string[] = [];
-                      greenPathPoints.push(`M ${zoneStartX} ${thresholdY}`);
-
-                      for (let i = 0; i <= sampleCount; i++) {
-                        const t = i / sampleCount;
-                        const x = zoneStartX + t * zoneWidth;
-                        const consumptionY = getConsumptionYAtX(x);
-                        // Follow consumption line (will be clipped by penalty overlays)
-                        greenPathPoints.push(`L ${x} ${consumptionY}`);
-                      }
-
-                      // Close green path back to threshold line at right edge
-                      greenPathPoints.push(`L ${zoneEndX} ${thresholdY}`);
-                      greenPathPoints.push('Z');
-                      const greenBackgroundPath = greenPathPoints.join(' ');
-
-                      // Render both green base and penalty-based colored segments
+                      // Render orange/red segments for areas above threshold
+                      // Include all segments (both inside and outside collection windows)
+                      // Collection windows will show green overlay when below threshold
                       return (
                         <>
-                          {/* Green background - fills area between threshold and consumption line (original behavior) */}
-                          <Path
-                            d={greenBackgroundPath}
-                            fill="#22c55e"
-                            opacity={0.4}
-                          />
-                          {/* Penalty-based colored segments overlay */}
                           {segments.map((segment, idx) => {
                             const closedPath = segment.pathPoints.join(' ');
 
@@ -863,7 +784,7 @@ export default function DashboardScreen() {
 
                             return (
                               <Path
-                                key={`evening-segment-${idx}`}
+                                key={`full-day-segment-${idx}`}
                                 d={closedPath}
                                 fill={fillColor}
                                 opacity={0.4}
@@ -872,6 +793,142 @@ export default function DashboardScreen() {
                           })}
                         </>
                       );
+                    })()}
+
+                    {/* Green background zone for 6 AM - 9 AM token collection window - only when below threshold */}
+                    {(() => {
+                      const zoneStartX =
+                        getXPositionForIndex(morningStartIndex);
+                      const zoneEndX = getXPositionForIndex(morningEndIndex);
+                      const zoneWidth = zoneEndX - zoneStartX;
+
+                      // Get threshold Y value - use exact value from thresholdData
+                      const thresholdValue = thresholdData[0]; // Same value used in chart
+                      const thresholdYRaw =
+                        getYPositionForValue(thresholdValue);
+                      // Subtract offset to align with threshold line
+                      const thresholdY = thresholdYRaw - 5;
+
+                      // Create smooth green background Path that follows consumption line
+                      // Only show green when consumption is below threshold
+                      const pathPoints: string[] = [];
+                      let hasBelowThreshold = false;
+
+                      // Start at top-left (threshold line)
+                      pathPoints.push(`M ${zoneStartX} ${thresholdY}`);
+
+                      // Sample extremely densely for ultra-smooth bezier-like curve that matches the chart line
+                      const sampleCount = Math.max(
+                        800,
+                        Math.floor(zoneWidth * 8),
+                      );
+                      for (let i = 0; i <= sampleCount; i++) {
+                        const t = i / sampleCount;
+                        // Calculate X position with proper calibration
+                        const x = zoneStartX + t * zoneWidth;
+
+                        // Get consumption Y position - this should exactly match the line chart
+                        const consumptionY = getConsumptionYAtX(x);
+
+                        // Only add points when consumption is below threshold
+                        const isAboveThreshold = consumptionY < thresholdY;
+                        if (!isAboveThreshold) {
+                          hasBelowThreshold = true;
+                          pathPoints.push(`L ${x} ${consumptionY}`);
+                        } else {
+                          // When above threshold, go back to threshold line
+                          pathPoints.push(`L ${x} ${thresholdY}`);
+                        }
+                      }
+
+                      // Close path back to threshold line at right edge
+                      pathPoints.push(`L ${zoneEndX} ${thresholdY}`);
+                      pathPoints.push('Z');
+
+                      const backgroundPath = pathPoints.join(' ');
+
+                      // Only render green if there are areas below threshold
+                      if (hasBelowThreshold) {
+                        return (
+                          <>
+                            {/* Green background - fills area between threshold and consumption line when below threshold */}
+                            <Path
+                              d={backgroundPath}
+                              fill="#22c55e"
+                              opacity={0.4}
+                            />
+                          </>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    {/* Green background zone for 6 PM - 10 PM (18:00 - 22:00) token collection window - only when below threshold */}
+                    {(() => {
+                      const zoneStartX =
+                        getXPositionForIndex(eveningStartIndex);
+                      const zoneEndX = getXPositionForIndex(eveningEndIndex);
+                      const zoneWidth = zoneEndX - zoneStartX;
+
+                      // Get threshold Y value - use exact value from thresholdData
+                      const thresholdValue = thresholdData[0]; // Same value used in chart
+                      const thresholdYRaw =
+                        getYPositionForValue(thresholdValue);
+                      // Subtract offset to align with threshold line
+                      const thresholdY = thresholdYRaw - 5;
+
+                      // Create smooth green background Path that follows consumption line
+                      // Only show green when consumption is below threshold
+                      const pathPoints: string[] = [];
+                      let hasBelowThreshold = false;
+
+                      // Start at top-left (threshold line)
+                      pathPoints.push(`M ${zoneStartX} ${thresholdY}`);
+
+                      // Sample extremely densely for ultra-smooth bezier-like curve that matches the chart line
+                      const sampleCount = Math.max(
+                        800,
+                        Math.floor(zoneWidth * 8),
+                      );
+                      for (let i = 0; i <= sampleCount; i++) {
+                        const t = i / sampleCount;
+                        // Calculate X position with proper calibration
+                        const x = zoneStartX + t * zoneWidth;
+
+                        // Get consumption Y position - this should exactly match the line chart
+                        const consumptionY = getConsumptionYAtX(x);
+
+                        // Only add points when consumption is below threshold
+                        const isAboveThreshold = consumptionY < thresholdY;
+                        if (!isAboveThreshold) {
+                          hasBelowThreshold = true;
+                          pathPoints.push(`L ${x} ${consumptionY}`);
+                        } else {
+                          // When above threshold, go back to threshold line
+                          pathPoints.push(`L ${x} ${thresholdY}`);
+                        }
+                      }
+
+                      // Close path back to threshold line at right edge
+                      pathPoints.push(`L ${zoneEndX} ${thresholdY}`);
+                      pathPoints.push('Z');
+
+                      const backgroundPath = pathPoints.join(' ');
+
+                      // Only render green if there are areas below threshold
+                      if (hasBelowThreshold) {
+                        return (
+                          <>
+                            {/* Green background - fills area between threshold and consumption line when below threshold */}
+                            <Path
+                              d={backgroundPath}
+                              fill="#22c55e"
+                              opacity={0.4}
+                            />
+                          </>
+                        );
+                      }
+                      return null;
                     })()}
 
                     {/* Collection window boundary lines */}
