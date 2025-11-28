@@ -45,6 +45,8 @@ export default function DashboardScreen() {
   // Get consumption data from mock data (will be replaced with API call later)
   // TODO: Replace with API call: const quarterHourData = await fetchDailyConsumption();
   const quarterHourData = useMemo(() => mockChartData.dailyConsumption, []);
+  // Get tokens data from mock data
+  const tokensData = useMemo(() => mockChartData.tokens, []);
   // Get metadata from mock data
   const metaData = useMemo(() => mockChartData.metadata, []);
   // Threshold data: threshold per day / 96 quarter-hours = threshold per quarter hour
@@ -275,6 +277,7 @@ export default function DashboardScreen() {
     const usage = quarterHourData[selectedIndex];
     const thresholdValue = threshold / 96;
     const isUnderLimit = usage < thresholdValue;
+    const tokenValue = tokensData[selectedIndex] || 0;
 
     return {
       time: formatTimeFromIndex(selectedIndex),
@@ -282,6 +285,7 @@ export default function DashboardScreen() {
       threshold: thresholdValue.toFixed(3),
       isUnderLimit,
       difference: Math.abs(usage - thresholdValue).toFixed(3),
+      tokens: tokenValue,
     };
   };
 
@@ -469,6 +473,21 @@ export default function DashboardScreen() {
                   </Text>
                 </View>
               </View>
+              {(getSelectedValueDetails()?.tokens ?? 0) > 0 ? (
+                <View style={styles.tokenValueContainer}>
+                  <Coins color="#eab308" size={14} />
+                  <Text style={styles.tokenValueText}>
+                    {getSelectedValueDetails()?.tokens} token
+                    {getSelectedValueDetails()?.tokens !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.tokenValueContainer}>
+                  <Text style={styles.outsideWindowText}>
+                    Outside of collecting window
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         )}
@@ -1129,6 +1148,23 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#ffffff',
+  },
+  tokenValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    gap: 4,
+  },
+  tokenValueText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#eab308',
+  },
+  outsideWindowText: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#9ca3af',
   },
   selectedValueStatusRow: {
     flexDirection: 'row',
