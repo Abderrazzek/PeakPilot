@@ -24,7 +24,7 @@ const unlockedBadges = [
   {
     id: 1,
     name: 'Energy Saver',
-    description: 'Stay below threshold for 7 consecutive days',
+    description: 'Stay below power reference for 7 consecutive days',
     reward: 50,
     unlockDate: 'Nov 27, 2025',
     gradient: ['#06b6d4', '#0891b2'],
@@ -34,7 +34,7 @@ const unlockedBadges = [
   {
     id: 2,
     name: 'First Steps',
-    description: 'Complete your first day below threshold',
+    description: 'Complete your first day below power reference',
     reward: 10,
     unlockDate: 'Nov 20, 2025',
     gradient: ['#3b82f6', '#1e40af'],

@@ -1008,7 +1008,8 @@ export default function DashboardScreen() {
                 <Text style={styles.infoValue}>6-9 AM & 6-10 PM</Text>
               </Text>
               <Text style={styles.infoSubtext}>
-                Stay below your threshold during these times to earn tokens
+                Stay below your power reference during these times to earn
+                tokens
               </Text>
             </View>
           </View>
