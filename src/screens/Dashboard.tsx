@@ -17,7 +17,7 @@ const screenWidth = Dimensions.get('window').width;
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const currentUsage = 24.6;
-  const threshold = 30;
+  const threshold = 110;
   const isUnderThreshold = currentUsage < threshold;
   const tokensEarned = isUnderThreshold ? 15 : 0;
   const penalty = !isUnderThreshold ? 8 : 0;
