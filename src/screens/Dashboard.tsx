@@ -593,6 +593,65 @@ export default function DashboardScreen() {
                       );
                     })()}
 
+                    {/* Green background zone for 6 PM - 10 PM (18:00 - 22:00) token collection window */}
+                    {(() => {
+                      const zoneStartX =
+                        getXPositionForIndex(eveningStartIndex);
+                      const zoneEndX = getXPositionForIndex(eveningEndIndex);
+                      const zoneWidth = zoneEndX - zoneStartX;
+
+                      // Get threshold Y value - use exact value from thresholdData
+                      const thresholdValue = thresholdData[0]; // Same value used in chart
+                      const thresholdYRaw =
+                        getYPositionForValue(thresholdValue);
+                      // Subtract offset to align with threshold line
+                      const thresholdY = thresholdYRaw - 5;
+
+                      // Create smooth green background Path that follows consumption line
+                      // Path: start at threshold (top) -> follow consumption line smoothly -> close back to threshold
+                      const pathPoints: string[] = [];
+
+                      // Start at top-left (threshold line)
+                      pathPoints.push(`M ${zoneStartX} ${thresholdY}`);
+
+                      // Sample extremely densely for ultra-smooth bezier-like curve that matches the chart line
+                      // Very high sample count creates smoother curves that perfectly follow the chart's bezier rendering
+                      const sampleCount = Math.max(
+                        800,
+                        Math.floor(zoneWidth * 8),
+                      );
+                      for (let i = 0; i <= sampleCount; i++) {
+                        const t = i / sampleCount;
+                        // Calculate X position with proper calibration
+                        const x = zoneStartX + t * zoneWidth;
+
+                        // Get consumption Y position - this should exactly match the line chart
+                        // Using calibrated X position to match chart library rendering
+                        const consumptionY = getConsumptionYAtX(x);
+
+                        // Use consumption Y directly to match the consumption line chart exactly
+                        // This ensures the bottom boundary follows the consumption line values precisely
+                        pathPoints.push(`L ${x} ${consumptionY}`);
+                      }
+
+                      // Close path back to threshold line at right edge
+                      pathPoints.push(`L ${zoneEndX} ${thresholdY}`);
+                      pathPoints.push('Z');
+
+                      const backgroundPath = pathPoints.join(' ');
+
+                      return (
+                        <>
+                          {/* Green background - fills area between threshold and consumption line */}
+                          <Path
+                            d={backgroundPath}
+                            fill="#22c55e"
+                            opacity={0.4}
+                          />
+                        </>
+                      );
+                    })()}
+
                     {/* Collection window boundary lines */}
                     {collectionWindowLines.map((line, index) => (
                       <Line
