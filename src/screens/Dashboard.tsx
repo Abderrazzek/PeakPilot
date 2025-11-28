@@ -70,6 +70,31 @@ export default function DashboardScreen() {
       .padStart(2, '0')}`;
   };
 
+  // Calculate X position for a given data point index in the chart
+  const getXPositionForIndex = (index: number): number => {
+    const leftPadding = 52;
+    const rightPadding = 25;
+    const dataAreaWidth = chartWidth - leftPadding - rightPadding;
+    const spacingBetweenPoints = dataAreaWidth / 95;
+    // X position = leftPadding + (index * spacing)
+    return leftPadding + index * spacingBetweenPoints;
+  };
+
+  // Calculate collection window line positions
+  // Morning: 6:00 AM - 9:00 AM (indices 24-35, so lines at 24 and 36)
+  // Evening: 6:00 PM - 11:00 PM (indices 72-91, so lines at 72 and 92)
+  const morningStartIndex = 6 * 4; // 24 (6:00 AM)
+  const morningEndIndex = 9 * 4; // 36 (9:00 AM)
+  const eveningStartIndex = 18 * 4; // 72 (6:00 PM)
+  const eveningEndIndex = 23 * 4; // 92 (11:00 PM)
+
+  const collectionWindowLines = [
+    { x: getXPositionForIndex(morningStartIndex), label: '6:00 AM' },
+    { x: getXPositionForIndex(morningEndIndex), label: '9:00 AM' },
+    { x: getXPositionForIndex(eveningStartIndex), label: '6:00 PM' },
+    { x: getXPositionForIndex(eveningEndIndex), label: '11:00 PM' },
+  ];
+
   const scrollViewRef = useRef<ScrollView>(null);
   const isScrollingRef = useRef(false);
   const scrollOffsetRef = useRef(0);
@@ -415,6 +440,32 @@ export default function DashboardScreen() {
                   withVerticalLines={false}
                   withHorizontalLines={true}
                 />
+
+                {/* Collection Window Lines - Always visible, scrolls with chart */}
+                <View
+                  style={styles.collectionWindowLinesContainer}
+                  pointerEvents="none"
+                >
+                  <Svg
+                    height={220}
+                    width={chartWidth}
+                    style={styles.collectionWindowLinesSvg}
+                  >
+                    {collectionWindowLines.map((line, index) => (
+                      <Line
+                        key={index}
+                        x1={line.x}
+                        y1={0}
+                        x2={line.x}
+                        y2={180}
+                        stroke="#ffffff"
+                        strokeWidth={1.5}
+                        strokeDasharray="4,4"
+                        opacity={0.6}
+                      />
+                    ))}
+                  </Svg>
+                </View>
               </View>
             </ScrollView>
 
@@ -794,6 +845,18 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   verticalLineSvg: {
+    position: 'absolute',
+  },
+  collectionWindowLinesContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: 220,
+    width: '100%',
+    pointerEvents: 'none',
+    zIndex: 1,
+  },
+  collectionWindowLinesSvg: {
     position: 'absolute',
   },
   selectedValueCard: {
