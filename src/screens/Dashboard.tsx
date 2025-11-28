@@ -284,6 +284,10 @@ export default function DashboardScreen() {
     if (selectedIndex === null) return null;
 
     const usage = quarterHourData[selectedIndex];
+    if (usage === undefined || usage === null || isNaN(usage)) {
+      return null;
+    }
+
     const thresholdValue = threshold / 96;
     const isUnderLimit = usage < thresholdValue;
     const tokenValue = tokensData[selectedIndex] || 0;
