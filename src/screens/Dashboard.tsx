@@ -272,6 +272,13 @@ export default function DashboardScreen() {
     }
   };
 
+  // Check if index is in collection window (6-9 AM or 18-22h)
+  const isInCollectionWindow = (index: number) => {
+    // 6-9 AM: indices 24-35 (6*4 to 9*4-1)
+    // 18-22h: indices 72-87 (18*4 to 22*4-1)
+    return (index >= 24 && index < 36) || (index >= 72 && index < 88);
+  };
+
   // Get selected value details
   const getSelectedValueDetails = () => {
     if (selectedIndex === null) return null;
@@ -281,6 +288,7 @@ export default function DashboardScreen() {
     const isUnderLimit = usage < thresholdValue;
     const tokenValue = tokensData[selectedIndex] || 0;
     const hasPenalty = penaltiesData[selectedIndex] || false;
+    const inCollectionWindow = isInCollectionWindow(selectedIndex);
 
     return {
       time: formatTimeFromIndex(selectedIndex),
@@ -290,6 +298,7 @@ export default function DashboardScreen() {
       difference: Math.abs(usage - thresholdValue).toFixed(3),
       tokens: tokenValue,
       hasPenalty,
+      inCollectionWindow,
     };
   };
 
@@ -483,12 +492,14 @@ export default function DashboardScreen() {
                     Insufficient Tokens: A penalty will be applied
                   </Text>
                 </View>
-              ) : (getSelectedValueDetails()?.tokens ?? 0) > 0 ? (
+              ) : getSelectedValueDetails()?.inCollectionWindow ? (
                 <View style={styles.tokenValueContainer}>
                   <Coins color="#eab308" size={14} />
                   <Text style={styles.tokenValueText}>
                     {getSelectedValueDetails()?.tokens} token
-                    {getSelectedValueDetails()?.tokens !== 1 ? 's' : ''}
+                    {Math.abs(getSelectedValueDetails()?.tokens ?? 0) !== 1
+                      ? 's'
+                      : ''}
                   </Text>
                 </View>
               ) : (
