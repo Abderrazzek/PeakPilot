@@ -45,6 +45,8 @@ export default function DashboardScreen() {
   // Get consumption data from mock data (will be replaced with API call later)
   // TODO: Replace with API call: const quarterHourData = await fetchDailyConsumption();
   const quarterHourData = useMemo(() => mockChartData.dailyConsumption, []);
+  // Get metadata from mock data
+  const metaData = useMemo(() => mockChartData.metadata, []);
   // Threshold data: threshold per day / 96 quarter-hours = threshold per quarter hour
   // TODO: Replace with API data when available
   const thresholdData = useMemo(
@@ -352,7 +354,7 @@ export default function DashboardScreen() {
               >
                 {currentUsage.toFixed(1)}
               </Text>
-              <Text style={styles.consumptionUnit}>kWh</Text>
+              <Text style={styles.consumptionUnit}>kW</Text>
             </View>
             <Text style={styles.thresholdLimit}>/ {threshold} kWh limit</Text>
           </View>
@@ -408,7 +410,10 @@ export default function DashboardScreen() {
       {/* Daily Consumption Chart */}
       <View style={styles.card}>
         <View style={styles.cardTitleRow}>
-          <Text style={styles.cardTitle}>Daily Consumption</Text>
+          <Text style={styles.cardTitle}>
+            Daily Consumption:{' '}
+            <Text style={styles.cardTitleDate}>{metaData.date}</Text>
+          </Text>
         </View>
 
         {/* Selected Value Display - Always visible */}
@@ -423,8 +428,29 @@ export default function DashboardScreen() {
           >
             <View style={styles.selectedValueHeader}>
               <Text style={styles.selectedValueTitle}>
-                Selected Time: {getSelectedValueDetails()?.time}
+                {getSelectedValueDetails()?.time}
               </Text>
+              <View
+                style={[
+                  styles.selectedValueStatusBadge,
+                  getSelectedValueDetails()?.isUnderLimit
+                    ? styles.selectedValueStatusBadgeSuccess
+                    : styles.selectedValueStatusBadgeWarning,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.selectedValueStatusText,
+                    getSelectedValueDetails()?.isUnderLimit
+                      ? styles.selectedValueStatusTextSuccess
+                      : styles.selectedValueStatusTextWarning,
+                  ]}
+                >
+                  {getSelectedValueDetails()?.isUnderLimit
+                    ? '✓ Under Limit'
+                    : '⚠ Over Limit'}
+                </Text>
+              </View>
             </View>
 
             <View style={styles.selectedValueContent}>
@@ -432,45 +458,16 @@ export default function DashboardScreen() {
                 <View style={styles.selectedValueItem}>
                   <Text style={styles.selectedValueLabel}>Your Usage</Text>
                   <Text style={styles.selectedValueNumber}>
-                    {getSelectedValueDetails()?.usage} kWh
+                    {getSelectedValueDetails()?.usage} kW
                   </Text>
                 </View>
                 <View style={styles.selectedValueDivider} />
                 <View style={styles.selectedValueItem}>
                   <Text style={styles.selectedValueLabel}>Threshold</Text>
                   <Text style={styles.selectedValueNumber}>
-                    {getSelectedValueDetails()?.threshold} kWh
+                    {getSelectedValueDetails()?.threshold} kW
                   </Text>
                 </View>
-              </View>
-
-              <View style={styles.selectedValueStatusRow}>
-                <Text style={styles.selectedValueStatusLabel}>Status:</Text>
-                <View
-                  style={[
-                    styles.selectedValueStatusBadge,
-                    getSelectedValueDetails()?.isUnderLimit
-                      ? styles.selectedValueStatusBadgeSuccess
-                      : styles.selectedValueStatusBadgeWarning,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.selectedValueStatusText,
-                      getSelectedValueDetails()?.isUnderLimit
-                        ? styles.selectedValueStatusTextSuccess
-                        : styles.selectedValueStatusTextWarning,
-                    ]}
-                  >
-                    {getSelectedValueDetails()?.isUnderLimit
-                      ? '✓ Under Limit'
-                      : '⚠ Over Limit'}
-                  </Text>
-                </View>
-                <Text style={styles.selectedValueDifference}>
-                  ({getSelectedValueDetails()?.isUnderLimit ? '-' : '+'}
-                  {getSelectedValueDetails()?.difference} kWh)
-                </Text>
               </View>
             </View>
           </View>
@@ -1011,6 +1008,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  cardTitleDate: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#9ca3af',
   },
   chartHint: {
     fontSize: 12,

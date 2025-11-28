@@ -116,7 +116,7 @@
   "threshold": 110,
   "metadata": {
     "date": "2025-11-27",
-    "unit": "kWh",
+    "unit": "kW",
     "interval": "quarter-hour",
     "totalIntervals": 96,
     "tokenCollectionWindows": {
