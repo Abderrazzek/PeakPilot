@@ -132,10 +132,6 @@ export default function TokenWalletScreen() {
             <View style={styles.coinIcon}>
               <Coins color="#ffffff" size={32} />
             </View>
-            <View style={styles.tokenValueContainer}>
-              <Text style={styles.tokenValueLabel}>Token Value</Text>
-              <Text style={styles.tokenValueAmount}>${tokenValue}</Text>
-            </View>
           </View>
 
           <Text style={styles.balanceLabel}>Total Balance</Text>
