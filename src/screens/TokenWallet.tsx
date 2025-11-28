@@ -23,16 +23,16 @@ import {
 const tokenHistory = [
   {
     id: 1,
-    type: 'earned',
-    amount: 15,
-    description: 'Below threshold - Nov 27',
+    type: 'lost',
+    amount: -45,
+    description: 'Over power reference - Nov 27',
     date: '2025-11-27',
   },
   {
     id: 2,
     type: 'earned',
     amount: 18,
-    description: 'Below threshold - Nov 26',
+    description: 'Below power reference - Nov 26',
     date: '2025-11-26',
   },
   {
@@ -90,7 +90,7 @@ export default function TokenWalletScreen() {
   const [transferModalVisible, setTransferModalVisible] = useState(false);
   const [offsetModalVisible, setOffsetModalVisible] = useState(false);
 
-  const totalTokens = 1247;
+  const totalTokens = 33;
   const tokenValue = (totalTokens * 0.05).toFixed(2);
   const penaltyAmount = 490;
   const penaltyCost = 24.5;
@@ -335,7 +335,7 @@ export default function TokenWalletScreen() {
                     Current Penalty: ${penaltyCost.toFixed(2)}
                   </Text>
                   <Text style={styles.warningSubtitle}>
-                    You exceeded your threshold this month
+                    You exceeded your power reference this month
                   </Text>
                 </View>
               </View>

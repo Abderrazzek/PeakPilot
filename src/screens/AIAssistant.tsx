@@ -8,9 +8,11 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Send, Bot, User as UserIcon } from 'lucide-react-native';
+import { askChatbot } from '../config/api';
 
 interface Message {
   id: number;
@@ -40,9 +42,10 @@ export default function AIAssistantScreen() {
   const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSend = () => {
-    if (inputText.trim() === '') return;
+  const handleSend = async () => {
+    if (inputText.trim() === '' || isLoading) return;
 
     const userMessage: Message = {
       id: messages.length + 1,
@@ -51,34 +54,93 @@ export default function AIAssistantScreen() {
       timestamp: new Date(),
     };
 
+    const question = inputText.trim();
     setMessages([...messages, userMessage]);
     setInputText('');
+    setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      // Check if it's a predefined question
+      const predefinedResponse = getAIResponse(question);
+
+      // If it's a predefined response (not the default fallback), use it
+      const isPredefined = isPredefinedQuestion(question);
+
+      let aiResponseContent: string;
+
+      if (isPredefined) {
+        aiResponseContent = predefinedResponse;
+      } else {
+        // Call the API for non-predefined questions
+        try {
+          aiResponseContent = await askChatbot(question);
+        } catch (apiError) {
+          // Fallback to default response if API fails
+          console.error('API error:', apiError);
+          aiResponseContent =
+            "I'm sorry, I'm having trouble connecting to the server right now. Please try again later or ask one of the predefined questions.";
+        }
+      }
+
       const aiResponse: Message = {
         id: messages.length + 2,
         type: 'assistant',
-        content: getAIResponse(userMessage.content),
+        content: aiResponseContent,
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, aiResponse]);
-    }, 1000);
+      setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error('Error handling message:', error);
+      const errorResponse: Message = {
+        id: messages.length + 2,
+        type: 'assistant',
+        content: "I'm sorry, something went wrong. Please try again.",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleQuickAction = (action: string) => {
     setInputText(action);
   };
 
+  const isPredefinedQuestion = (userMessage: string): boolean => {
+    const lowerMessage = userMessage.toLowerCase();
+
+    // Check if the question matches predefined patterns
+    const predefinedPatterns = [
+      'save',
+      'energy',
+      'token',
+      'reward',
+      'threshold',
+      'appliance',
+      'time',
+    ];
+
+    // Check if it matches quick actions exactly
+    const matchesQuickAction = quickActions.some(
+      action => action.toLowerCase() === lowerMessage,
+    );
+
+    if (matchesQuickAction) return true;
+
+    // Check if it matches predefined patterns
+    return predefinedPatterns.some(pattern => lowerMessage.includes(pattern));
+  };
+
   const getAIResponse = (userMessage: string): string => {
     const lowerMessage = userMessage.toLowerCase();
 
     if (lowerMessage.includes('save') || lowerMessage.includes('energy')) {
-      return "Here are some top tips to save energy:\n\n1. Use appliances during off-peak hours (10 PM - 6 AM) for lower rates\n2. Set your thermostat 2-3 degrees lower in winter, higher in summer\n3. Unplug devices when not in use\n4. Use LED bulbs - they use 75% less energy\n5. Run full loads in dishwasher and washing machine\n\nThese changes can help you stay below your daily threshold and earn more tokens!";
+      return 'Here are some top tips to save energy:\n\n1. Use appliances during off-peak hours (10 PM - 6 AM) for lower rates\n2. Set your thermostat 2-3 degrees lower in winter, higher in summer\n3. Unplug devices when not in use\n4. Use LED bulbs - they use 75% less energy\n5. Run full loads in dishwasher and washing machine\n\nThese changes can help you stay below your daily threshold and earn more tokens!';
     }
 
     if (lowerMessage.includes('token') || lowerMessage.includes('reward')) {
-      return "Token rewards explained:\n\n✅ Stay below daily threshold: Earn 15-20 tokens\n✅ Off-peak usage bonus: Earn 10-15 tokens\n✅ Weekly streak: Earn 20-30 tokens\n✅ Referral bonus: Earn 50 tokens per friend\n\n❌ Above threshold: Lose 8-10 tokens\n\nYou can spend tokens on partner offers, transfer them to friends, or use them to offset bill penalties!";
+      return 'Token rewards explained:\n\n✅ Stay below daily threshold: Earn 15-20 tokens\n✅ Off-peak usage bonus: Earn 10-15 tokens\n✅ Weekly streak: Earn 20-30 tokens\n✅ Referral bonus: Earn 50 tokens per friend\n\n❌ Above threshold: Lose 8-10 tokens\n\nYou can spend tokens on partner offers, transfer them to friends, or use them to offset bill penalties!';
     }
 
     if (lowerMessage.includes('threshold')) {
@@ -86,7 +148,7 @@ export default function AIAssistantScreen() {
     }
 
     if (lowerMessage.includes('appliance') || lowerMessage.includes('time')) {
-      return "Best times to use appliances for maximum savings:\n\n🌙 Off-Peak (10 PM - 6 AM): Lowest rates\n• Washing machine & dryer\n• Dishwasher\n• Electric car charging\n• Water heater (if programmable)\n\n☀️ Mid-Day (11 AM - 3 PM): Moderate rates\n• Quick loads when needed\n\n⚡ Peak (4 PM - 9 PM): Highest rates - AVOID\n• Wait until after 9 PM for heavy appliances\n\nShifting just one load per day to off-peak can save you $20-30/month!";
+      return 'Best times to use appliances for maximum savings:\n\n🌙 Off-Peak (10 PM - 6 AM): Lowest rates\n• Washing machine & dryer\n• Dishwasher\n• Electric car charging\n• Water heater (if programmable)\n\n☀️ Mid-Day (11 AM - 3 PM): Moderate rates\n• Quick loads when needed\n\n⚡ Peak (4 PM - 9 PM): Highest rates - AVOID\n• Wait until after 9 PM for heavy appliances\n\nShifting just one load per day to off-peak can save you $20-30/month!';
     }
 
     return "I understand you're asking about energy management. I can help with:\n\n• Understanding your consumption patterns\n• Tips for reducing energy use\n• Explaining token rewards\n• Best times to use appliances\n• Strategies to stay below threshold\n\nWhat specific aspect would you like to know more about?";
@@ -108,13 +170,18 @@ export default function AIAssistantScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.messagesContainer} contentContainerStyle={styles.messagesContent}>
-        {messages.map((message) => (
+      <ScrollView
+        style={styles.messagesContainer}
+        contentContainerStyle={styles.messagesContent}
+      >
+        {messages.map(message => (
           <View
             key={message.id}
             style={[
               styles.messageWrapper,
-              message.type === 'user' ? styles.userMessageWrapper : styles.assistantMessageWrapper,
+              message.type === 'user'
+                ? styles.userMessageWrapper
+                : styles.assistantMessageWrapper,
             ]}
           >
             {message.type === 'assistant' && (
@@ -125,13 +192,17 @@ export default function AIAssistantScreen() {
             <View
               style={[
                 styles.messageBubble,
-                message.type === 'user' ? styles.userMessage : styles.assistantMessage,
+                message.type === 'user'
+                  ? styles.userMessage
+                  : styles.assistantMessage,
               ]}
             >
               <Text
                 style={[
                   styles.messageText,
-                  message.type === 'user' ? styles.userMessageText : styles.assistantMessageText,
+                  message.type === 'user'
+                    ? styles.userMessageText
+                    : styles.assistantMessageText,
                 ]}
               >
                 {message.content}
@@ -173,11 +244,18 @@ export default function AIAssistantScreen() {
           maxLength={500}
         />
         <TouchableOpacity
-          style={[styles.sendButton, inputText.trim() === '' && styles.sendButtonDisabled]}
+          style={[
+            styles.sendButton,
+            (inputText.trim() === '' || isLoading) && styles.sendButtonDisabled,
+          ]}
           onPress={handleSend}
-          disabled={inputText.trim() === ''}
+          disabled={inputText.trim() === '' || isLoading}
         >
-          <Send color="#ffffff" size={20} />
+          {isLoading ? (
+            <ActivityIndicator color="#ffffff" size="small" />
+          ) : (
+            <Send color="#ffffff" size={20} />
+          )}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

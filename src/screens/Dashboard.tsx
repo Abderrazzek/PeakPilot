@@ -527,7 +527,7 @@ export default function DashboardScreen() {
         <View style={styles.cardTitleRow}>
           <Text style={styles.cardTitle}>
             Daily Consumption:{' '}
-            <Text style={styles.cardTitleDate}>{metaData.date}</Text>
+            <Text style={styles.cardTitleDate}>2025-11-27</Text>
           </Text>
         </View>
 
