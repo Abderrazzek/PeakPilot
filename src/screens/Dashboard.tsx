@@ -492,7 +492,7 @@ export default function DashboardScreen() {
                     Insufficient Tokens: A penalty will be applied
                   </Text>
                 </View>
-              ) : getSelectedValueDetails()?.inCollectionWindow ? (
+              ) : (getSelectedValueDetails()?.tokens ?? 0) !== 0 ? (
                 <View style={styles.tokenValueContainer}>
                   <Coins color="#eab308" size={14} />
                   <Text style={styles.tokenValueText}>
