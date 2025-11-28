@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,25 +6,101 @@ import {
   ScrollView,
   Dimensions,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LineChart } from 'react-native-chart-kit';
 import { Zap, Coins, Lightbulb, Info, Clock } from 'lucide-react-native';
 import Svg, { Line, Path } from 'react-native-svg';
 import mockChartData from '../data/mockChartData.json';
+import { getApiUrl, API_ENDPOINTS } from '../config/api';
 
 const screenWidth = Dimensions.get('window').width;
+
+// Type definition for chart data
+interface ChartData {
+  dailyConsumption: number[];
+  tokens: number[];
+  penalties: boolean[];
+  threshold: number;
+  metadata: {
+    date: string;
+    unit: string;
+    interval: string;
+    totalIntervals: number;
+    tokenCollectionWindows: {
+      morning: string;
+      evening: string;
+    };
+  };
+}
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const currentUsage = 24.6;
-  // Get threshold from mock data (will be replaced with API data later)
-  const threshold = mockChartData.threshold;
+
+  // State management
+  const [chartData, setChartData] = useState<ChartData | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number>(0);
+
+  // Fetch chart data from API
+  useEffect(() => {
+    const fetchChartData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const apiUrl = getApiUrl(API_ENDPOINTS.CHART_DATA);
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            `API error: ${response.status} ${response.statusText}`,
+          );
+        }
+
+        const data: ChartData = await response.json();
+
+        // Validate data structure
+        if (
+          !data.dailyConsumption ||
+          !data.tokens ||
+          !data.penalties ||
+          data.threshold === undefined ||
+          !data.metadata
+        ) {
+          throw new Error('Invalid data structure received from API');
+        }
+
+        setChartData(data);
+      } catch (err) {
+        console.error('Error fetching chart data:', err);
+        setError(
+          err instanceof Error ? err.message : 'Failed to fetch chart data',
+        );
+        // Fallback to mock data on error
+        setChartData(mockChartData as ChartData);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchChartData();
+  }, []);
+
+  // Use API data or fallback to mock data
+  const data = chartData || (mockChartData as ChartData);
+  const threshold = data.threshold;
   const isUnderThreshold = currentUsage < threshold;
   const tokensEarned = isUnderThreshold ? 15 : 0;
   const penalty = !isUnderThreshold ? 8 : 0;
-  // Initialize with index 0 to show the box from the beginning
-  const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
   // Generate quarter-hour labels for one full day (96 intervals)
   // Provide 96 labels but only show text for every hour (every 4th label) for readability
@@ -42,17 +118,15 @@ export default function DashboardScreen() {
     return labels;
   };
 
-  // Get consumption data from mock data (will be replaced with API call later)
-  // TODO: Replace with API call: const quarterHourData = await fetchDailyConsumption();
-  const quarterHourData = useMemo(() => mockChartData.dailyConsumption, []);
-  // Get tokens data from mock data
-  const tokensData = useMemo(() => mockChartData.tokens, []);
-  // Get penalties data from mock data
-  const penaltiesData = useMemo(() => mockChartData.penalties, []);
-  // Get metadata from mock data
-  const metaData = useMemo(() => mockChartData.metadata, []);
+  // Get consumption data from API or mock data
+  const quarterHourData = useMemo(() => data.dailyConsumption, [data]);
+  // Get tokens data from API or mock data
+  const tokensData = useMemo(() => data.tokens, [data]);
+  // Get penalties data from API or mock data
+  const penaltiesData = useMemo(() => data.penalties, [data]);
+  // Get metadata from API or mock data
+  const metaData = useMemo(() => data.metadata, [data]);
   // Threshold data: threshold per day / 96 quarter-hours = threshold per quarter hour
-  // TODO: Replace with API data when available
   const thresholdData = useMemo(
     () => Array(96).fill(threshold / 96),
     [threshold],
@@ -309,8 +383,8 @@ export default function DashboardScreen() {
   // Memoize labels to prevent regeneration on each render
   const chartLabels = useMemo(() => generateQuarterHourLabels(), []);
 
-  // Memoize chartData to prevent regeneration on each render
-  const chartData = useMemo(
+  // Memoize chartDataConfig to prevent regeneration on each render
+  const chartDataConfig = useMemo(
     () => ({
       labels: chartLabels,
       datasets: [
@@ -346,6 +420,19 @@ export default function DashboardScreen() {
     },
   };
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text style={styles.loadingText}>Loading ...</Text>
+        {error && (
+          <Text style={styles.errorText}>Using fallback data: {error}</Text>
+        )}
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       style={styles.container}
@@ -354,6 +441,13 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Peak Pilot</Text>
         <Text style={styles.subtitle}>Track your energy, earn rewards</Text>
+        {error && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>
+              ⚠️ Using fallback data: {error}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Status Card */}
@@ -553,7 +647,7 @@ export default function DashboardScreen() {
                 onTouchEnd={handleChartTouchEnd}
               >
                 <LineChart
-                  data={chartData}
+                  data={chartDataConfig}
                   width={chartWidth}
                   height={220}
                   chartConfig={chartConfig}
@@ -1464,5 +1558,36 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 24,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#9ca3af',
+  },
+  errorText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#fca5a5',
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
+  errorBanner: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
+  errorBannerText: {
+    fontSize: 12,
+    color: '#fca5a5',
+    textAlign: 'center',
   },
 });
