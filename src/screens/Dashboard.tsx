@@ -47,6 +47,8 @@ export default function DashboardScreen() {
   const quarterHourData = useMemo(() => mockChartData.dailyConsumption, []);
   // Get tokens data from mock data
   const tokensData = useMemo(() => mockChartData.tokens, []);
+  // Get penalties data from mock data
+  const penaltiesData = useMemo(() => mockChartData.penalties, []);
   // Get metadata from mock data
   const metaData = useMemo(() => mockChartData.metadata, []);
   // Threshold data: threshold per day / 96 quarter-hours = threshold per quarter hour
@@ -278,6 +280,7 @@ export default function DashboardScreen() {
     const thresholdValue = threshold / 96;
     const isUnderLimit = usage < thresholdValue;
     const tokenValue = tokensData[selectedIndex] || 0;
+    const hasPenalty = penaltiesData[selectedIndex] || false;
 
     return {
       time: formatTimeFromIndex(selectedIndex),
@@ -286,6 +289,7 @@ export default function DashboardScreen() {
       isUnderLimit,
       difference: Math.abs(usage - thresholdValue).toFixed(3),
       tokens: tokenValue,
+      hasPenalty,
     };
   };
 
@@ -473,7 +477,13 @@ export default function DashboardScreen() {
                   </Text>
                 </View>
               </View>
-              {(getSelectedValueDetails()?.tokens ?? 0) > 0 ? (
+              {getSelectedValueDetails()?.hasPenalty ? (
+                <View style={styles.tokenValueContainer}>
+                  <Text style={styles.penaltyText}>
+                    Insufficient Tokens: A penalty will be applied
+                  </Text>
+                </View>
+              ) : (getSelectedValueDetails()?.tokens ?? 0) > 0 ? (
                 <View style={styles.tokenValueContainer}>
                   <Coins color="#eab308" size={14} />
                   <Text style={styles.tokenValueText}>
@@ -1160,6 +1170,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#eab308',
+  },
+  penaltyText: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#fca5a5',
   },
   outsideWindowText: {
     fontSize: 14,
