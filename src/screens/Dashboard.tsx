@@ -11,13 +11,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LineChart } from 'react-native-chart-kit';
 import { Zap, Coins, Lightbulb, Info, Clock } from 'lucide-react-native';
 import Svg, { Line } from 'react-native-svg';
+import mockChartData from '../data/mockChartData.json';
 
 const screenWidth = Dimensions.get('window').width;
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const currentUsage = 24.6;
-  const threshold = 110;
+  // Get threshold from mock data (will be replaced with API data later)
+  const threshold = mockChartData.threshold;
   const isUnderThreshold = currentUsage < threshold;
   const tokensEarned = isUnderThreshold ? 15 : 0;
   const penalty = !isUnderThreshold ? 8 : 0;
@@ -40,43 +42,11 @@ export default function DashboardScreen() {
     return labels;
   };
 
-  // Generate 96 data points (one for each quarter hour in 24 hours)
-  const generateQuarterHourData = () => {
-    const data = [];
-    // Simulate realistic energy consumption pattern throughout the day
-    for (let i = 0; i < 96; i++) {
-      const hour = Math.floor(i / 4);
-
-      // Base consumption varies by time of day
-      let baseConsumption = 0.8; // Base kWh per quarter hour
-
-      // Morning peak (6-9 AM) - token collection window
-      if (hour >= 6 && hour < 9) {
-        baseConsumption = 0.6 + Math.random() * 0.3; // Lower consumption during collection window
-      }
-      // Evening peak (6-11 PM) - token collection window
-      else if (hour >= 18 && hour < 23) {
-        baseConsumption = 0.7 + Math.random() * 0.4;
-      }
-      // Night (11 PM - 6 AM) - low consumption
-      else if (hour >= 23 || hour < 6) {
-        baseConsumption = 0.3 + Math.random() * 0.2;
-      }
-      // Daytime (9 AM - 6 PM) - moderate consumption
-      else {
-        baseConsumption = 0.9 + Math.random() * 0.5;
-      }
-
-      // Add some variation for quarter-hour intervals
-      baseConsumption += (Math.random() - 0.5) * 0.1;
-      data.push(Math.max(0.1, baseConsumption));
-    }
-    return data;
-  };
-
-  // Memoize data generation to prevent regeneration on each render
-  const quarterHourData = useMemo(() => generateQuarterHourData(), []);
-  // Threshold: 30 kWh per day / 96 quarter-hours ≈ 0.3125 kWh per quarter hour
+  // Get consumption data from mock data (will be replaced with API call later)
+  // TODO: Replace with API call: const quarterHourData = await fetchDailyConsumption();
+  const quarterHourData = useMemo(() => mockChartData.dailyConsumption, []);
+  // Threshold data: threshold per day / 96 quarter-hours = threshold per quarter hour
+  // TODO: Replace with API data when available
   const thresholdData = useMemo(
     () => Array(96).fill(threshold / 96),
     [threshold],
