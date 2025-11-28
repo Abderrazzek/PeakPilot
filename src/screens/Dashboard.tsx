@@ -7,35 +7,14 @@ import {
   Dimensions,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LineChart } from 'react-native-chart-kit';
 import { Zap, Coins, Lightbulb, Info, Clock } from 'lucide-react-native';
 import Svg, { Line, Path } from 'react-native-svg';
 import mockChartData from '../data/mockChartData.json';
-import { getApiUrl, API_ENDPOINTS } from '../config/api';
 
 const screenWidth = Dimensions.get('window').width;
-
-// Type definition for API response
-interface ApiResponse {
-  dailyConsumption: number[];
-  tokensGained: number[];
-  tokensSpent: number[];
-  penalties: boolean[];
-  threshold: number;
-  metadata: {
-    date: string;
-    unit: string;
-    interval: string;
-    totalIntervals: number;
-    tokenCollectionWindows: {
-      morning: string;
-      evening: string;
-    };
-  };
-}
 
 // Type definition for chart data (internal format)
 interface ChartData {
@@ -62,113 +41,16 @@ export default function DashboardScreen() {
   // State management
   const [chartData, setChartData] = useState<ChartData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
-  // Fetch chart data from API
+  // Always use mock chart data
   useEffect(() => {
-    const fetchChartData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const apiUrl = getApiUrl(API_ENDPOINTS.CHART_DATA);
-        console.log('===========apiUrl', apiUrl);
-        console.log('===========Platform:', Platform.OS);
-
-        const response = await fetch(apiUrl, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        console.log('===========response status:', response.status);
-        console.log('===========response ok:', response.ok);
-        console.log(
-          '===========response headers:',
-          JSON.stringify([...response.headers.entries()]),
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.log('===========error response body:', errorText);
-          throw new Error(
-            `API error: ${response.status} ${response.statusText} - ${errorText}`,
-          );
-        }
-
-        const apiData: ApiResponse = await response.json();
-        console.log('===========response data received:', Object.keys(apiData));
-
-        // Validate API response structure
-        if (
-          !apiData.dailyConsumption ||
-          !apiData.tokensGained ||
-          !apiData.tokensSpent ||
-          !apiData.penalties ||
-          apiData.threshold === undefined ||
-          !apiData.metadata
-        ) {
-          console.error('API response missing required fields:', {
-            hasDailyConsumption: !!apiData.dailyConsumption,
-            hasTokensGained: !!apiData.tokensGained,
-            hasTokensSpent: !!apiData.tokensSpent,
-            hasPenalties: !!apiData.penalties,
-            hasThreshold: apiData.threshold !== undefined,
-            hasMetadata: !!apiData.metadata,
-          });
-          throw new Error('Invalid data structure received from API');
-        }
-
-        // Transform API response to match ChartData interface
-        // Combine tokensGained and tokensSpent into a single tokens array
-        // tokensGained are positive, tokensSpent are already negative values
-        const tokens = apiData.tokensGained.map((gained, index) => {
-          const spent = apiData.tokensSpent[index] || 0;
-          return gained + spent; // tokensSpent is already negative, so just add them
-        });
-
-        const transformedData: ChartData = {
-          dailyConsumption: apiData.dailyConsumption,
-          tokens: tokens,
-          penalties: apiData.penalties,
-          threshold: apiData.threshold,
-          metadata: apiData.metadata,
-        };
-
-        console.log('===========transformed data:', {
-          dailyConsumptionLength: transformedData.dailyConsumption.length,
-          tokensLength: transformedData.tokens.length,
-          penaltiesLength: transformedData.penalties.length,
-        });
-
-        setChartData(transformedData);
-      } catch (err) {
-        console.error('Error fetching chart data:', err);
-        console.error('Error type:', typeof err);
-        console.error(
-          'Error name:',
-          err instanceof Error ? err.name : 'unknown',
-        );
-        console.error(
-          'Error message:',
-          err instanceof Error ? err.message : String(err),
-        );
-        console.error(
-          'Error stack:',
-          err instanceof Error ? err.stack : 'no stack',
-        );
-        setError(
-          err instanceof Error ? err.message : 'Failed to fetch chart data',
-        );
-        // Fallback to mock data on error
-        setChartData(mockChartData as ChartData);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchChartData();
+    setIsLoading(true);
+    // Simulate a brief loading state for better UX
+    setTimeout(() => {
+      setChartData(mockChartData as ChartData);
+      setIsLoading(false);
+    }, 100);
   }, []);
 
   // Use API data or fallback to mock data
@@ -200,8 +82,6 @@ export default function DashboardScreen() {
   const tokensData = useMemo(() => data.tokens, [data]);
   // Get penalties data from API or mock data
   const penaltiesData = useMemo(() => data.penalties, [data]);
-  // Get metadata from API or mock data
-  const metaData = useMemo(() => data.metadata, [data]);
   // Threshold data: threshold per day / 96 quarter-hours = threshold per quarter hour
   const thresholdData = useMemo(
     () => Array(96).fill(threshold / 96),
@@ -502,9 +382,6 @@ export default function DashboardScreen() {
       <View style={[styles.container, styles.loadingContainer]}>
         <ActivityIndicator size="large" color="#3b82f6" />
         <Text style={styles.loadingText}>Loading ...</Text>
-        {error && (
-          <Text style={styles.errorText}>Using fallback data: {error}</Text>
-        )}
       </View>
     );
   }
@@ -517,13 +394,6 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Peak Pilot</Text>
         <Text style={styles.subtitle}>Track your energy, earn rewards</Text>
-        {error && (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorBannerText}>
-              ⚠️ Using fallback data: {error}
-            </Text>
-          </View>
-        )}
       </View>
 
       {/* Status Card */}
