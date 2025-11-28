@@ -73,7 +73,15 @@ export default function AIAssistantScreen() {
       } else {
         // Call the API for non-predefined questions
         try {
-          aiResponseContent = await askChatbot(question);
+          const chatbotResponse = await askChatbot(question);
+          // Extract the "answer" field from the response
+          console.log('===========chatbotResponse', chatbotResponse);
+          const answer =
+            chatbotResponse.analysis_result?.answer ||
+            chatbotResponse.answer ||
+            chatbotResponse.response ||
+            JSON.stringify(chatbotResponse);
+          aiResponseContent = answer;
         } catch (apiError) {
           // Fallback to default response if API fails
           console.error('API error:', apiError);

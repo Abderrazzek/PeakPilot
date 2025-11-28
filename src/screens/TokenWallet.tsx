@@ -24,7 +24,7 @@ const tokenHistory = [
   {
     id: 1,
     type: 'lost',
-    amount: -45,
+    amount: -177,
     description: 'Over power reference - Nov 27',
     date: '2025-11-27',
   },

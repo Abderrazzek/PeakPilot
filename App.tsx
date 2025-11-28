@@ -10,6 +10,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AppNavigator from './src/navigation/AppNavigator';
 
+// Import Reactotron configuration (only runs in __DEV__ mode)
+if (__DEV__) {
+  require('./src/config/ReactotronConfig');
+}
+
 function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
